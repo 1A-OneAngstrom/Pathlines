@@ -75,33 +75,170 @@ SEPathlineOfCenterOfMassVisualModel::~SEPathlineOfCenterOfMassVisualModel() {
 
 }
 
- bool SEPathlineOfCenterOfMassVisualModel::isSerializable() const {
+bool SEPathlineOfCenterOfMassVisualModel::isSerializable() const {
 
-	// SAMSON Element generator pro tip: serialization is used in SAMSON to e.g. save documents, copy nodes, etc. 
+	// SAMSON Element generator pro tip: serialization is used in SAMSON to e.g. save documents, copy nodes, etc.
 	// Please refer to the SDK documentation for more information.
 	// Modify the line below to "return true;" if you want this visual model be serializable (hence copyable, savable, etc.)
 
-	return false;
+	return true;
 	
 }
 
 void SEPathlineOfCenterOfMassVisualModel::serialize(SBCSerializer* serializer, const SBNodeIndexer& nodeIndexer, const SBVersionNumber& sdkVersionNumber, const SBVersionNumber& classVersionNumber) const {
 
+	// Serialization of the parent class
+
 	SBMVisualModel::serialize(serializer, nodeIndexer, sdkVersionNumber, classVersionNumber);
 
-	// SAMSON Element generator pro tip: serialization is used in SAMSON to e.g. save documents, copy nodes, etc. 
+	// SAMSON Element generator pro tip: serialization is used in SAMSON to e.g. save documents, copy nodes, etc.
 	// Please refer to the SDK documentation for more information.
-	// Complete this function to serialize your visual model.
+
+	// Write parameters
+
+	serializer->writeDoubleElement("radius", (double)radius.getValue());
+	serializer->writeUnsignedCharElement("colorRed", colorRed);
+	serializer->writeUnsignedCharElement("colorGreen", colorGreen);
+	serializer->writeUnsignedCharElement("colorBlue", colorBlue);
+
+	// Serialize referenced atoms
+
+	unsigned int nodeIndex = 0; // the index of the node in the indexer
+
+	// Write the number of atoms to which this visual model is applied
+	serializer->writeUnsignedIntElement("numberOfAtoms", atomIndexer.size());
+
+	// Write indices of the atoms to which this visual model is applied
+
+	SB_FOR(SBPointer<SBAtom> atom, atomIndexer) {
+
+		if (nodeIndexer.getIndex(atom(), nodeIndex)) {
+
+			// the atom is indexed
+
+			serializer->writeBoolElement("atomIsIndexed", true);
+			serializer->writeUnsignedIntElement("atomIndex", nodeIndex);
+
+		}
+		else {
+
+			// the atom is not indexed, the user must be copying just the visual model
+			// so we serialize the atom's address itself
+
+			serializer->writeBoolElement("atomIsIndexed", false);
+			serializer->writeUnsignedLongLongElement("atomIndex", (unsigned long long)atom());
+
+		}
+
+	}
+
+	// Serialize referenced paths
+
+	// Write the number of paths to which this visual model is applied
+	serializer->writeUnsignedIntElement("numberOfPaths", pathIndexer.size());
+
+	// Write indices of the paths to which this visual model is applied
+
+	SB_FOR(SBPointer<SBPath> path, pathIndexer) {
+
+		if (nodeIndexer.getIndex(path(), nodeIndex)) {
+
+			// the path is indexed
+
+			serializer->writeBoolElement("pathIsIndexed", true);
+			serializer->writeUnsignedIntElement("pathIndex", nodeIndex);
+
+		}
+		else {
+
+			// the path is not indexed, the user must be copying just the visual model
+			// so we serialize the path's address itself
+
+			serializer->writeBoolElement("pathIsIndexed", false);
+			serializer->writeUnsignedLongLongElement("pathIndex", (unsigned long long)path());
+
+		}
+
+	}
 
 }
 
 void SEPathlineOfCenterOfMassVisualModel::unserialize(SBCSerializer* serializer, const SBNodeIndexer& nodeIndexer, const SBVersionNumber& sdkVersionNumber, const SBVersionNumber& classVersionNumber) {
 
+	// Unserialization of the parent class
+
 	SBMVisualModel::unserialize(serializer, nodeIndexer, sdkVersionNumber, classVersionNumber);
-	
-	// SAMSON Element generator pro tip: serialization is used in SAMSON to e.g. save documents, copy nodes, etc. 
+
+	// SAMSON Element generator pro tip: serialization is used in SAMSON to e.g. save documents, copy nodes, etc.
 	// Please refer to the SDK documentation for more information.
-	// Complete this function to unserialize your visual model.
+
+	// Read parameters
+
+	radius = SBQuantity::length(serializer->readDoubleElement());
+	colorRed = serializer->readUnsignedCharElement();
+	colorGreen = serializer->readUnsignedCharElement();
+	colorBlue = serializer->readUnsignedCharElement();
+
+	// Unserialize referenced atoms
+
+	bool isNodeIndexed;
+	unsigned int nodeIndex = 0; // the index of the node in the indexer
+
+	// Read the number of atoms to which this visual model is applied
+	unsigned int numberOfAtoms = serializer->readUnsignedIntElement();
+
+	// Read indices of the atoms to which this visual model is applied and
+	// add these node into the atom indexer of the visual model
+
+	for (unsigned int i = 0; i < numberOfAtoms; ++i) {
+
+		isNodeIndexed = serializer->readBoolElement();
+		if (isNodeIndexed) {
+
+			// the atom was serialized too
+
+			nodeIndex = serializer->readUnsignedIntElement();
+			atomIndexer.addReferenceTarget(nodeIndexer[nodeIndex]);
+
+		}
+		else {
+
+			// the atom was not serialized, it must still exist in memory
+
+			atomIndexer.addReferenceTarget((SBAtom*)serializer->readUnsignedLongLongElement());
+
+		}
+
+	}
+
+	// Unserialize referenced paths
+
+	// Read the number of paths to which this visual model is applied
+	unsigned int numberOfPaths = serializer->readUnsignedIntElement();
+
+	// Read indices of the paths to which this visual model is applied and
+	// add these node into the path indexer of the visual model
+
+	for (unsigned int i = 0; i < numberOfPaths; ++i) {
+
+		isNodeIndexed = serializer->readBoolElement();
+		if (isNodeIndexed) {
+
+			// the path was serialized too
+
+			nodeIndex = serializer->readUnsignedIntElement();
+			pathIndexer.addReferenceTarget(nodeIndexer[nodeIndex]);
+
+		}
+		else {
+
+			// the path was not serialized, it must still exist in memory
+
+			pathIndexer.addReferenceTarget((SBPath*)serializer->readUnsignedLongLongElement());
+
+		}
+
+	}
 
 }
 
