@@ -2,6 +2,7 @@
 #include "SAMSON.hpp"
 #include "SBQuantity.hpp"
 #include "SBDColorSchemeConstant.hpp"
+#include "SBDDataGraphNodeMaterial.hpp"
 
 //#include <QOpenGLShaderProgram>
 
@@ -19,9 +20,10 @@ SEPathlineOfCenterOfMassVisualModel::SEPathlineOfCenterOfMassVisualModel(const S
 	// the atoms' structural signals (e.g. to update the center of mass when an atom is moved).
 
 	radius = SBQuantity::length(30);	// set a default radius
-	colorRed   = 255;					// set a default color
-	colorGreen = 0;
-	colorBlue  = 0;
+
+	colorRed   = 1.0f;					// set a default color
+	colorGreen = 0.0f;
+	colorBlue  = 0.0f;
 
 	// nodeIndexer may contain both atoms and paths
 
@@ -97,9 +99,17 @@ void SEPathlineOfCenterOfMassVisualModel::serialize(SBCSerializer* serializer, c
 	// Write parameters
 
 	serializer->writeDoubleElement("radius", (double)radius.getValue());
-	serializer->writeUnsignedCharElement("colorRed", colorRed);
-	serializer->writeUnsignedCharElement("colorGreen", colorGreen);
-	serializer->writeUnsignedCharElement("colorBlue", colorBlue);
+
+	// In case of serializing for an old version of the Element for SAMSON SDK version number below 0.8.0, write additional parameters.
+	// See the Serialization section in Developers guide for more information.
+
+	if (sdkVersionNumber < SBVersionNumber(0, 8, 0)) {
+
+		serializer->writeUnsignedCharElement("colorRed", colorRed);
+		serializer->writeUnsignedCharElement("colorGreen", colorGreen);
+		serializer->writeUnsignedCharElement("colorBlue", colorBlue);
+
+	}
 
 	// Serialize referenced atoms
 
@@ -175,9 +185,17 @@ void SEPathlineOfCenterOfMassVisualModel::unserialize(SBCSerializer* serializer,
 	// Read parameters
 
 	radius = SBQuantity::length(serializer->readDoubleElement());
-	colorRed = serializer->readUnsignedCharElement();
-	colorGreen = serializer->readUnsignedCharElement();
-	colorBlue = serializer->readUnsignedCharElement();
+
+	// In case of unserializing from a file saved with an old version of the Element for SAMSON SDK version number below 0.8.0, read additional serialized parameters.
+	// See the Serialization section in Developers guide for more information.
+
+	if (sdkVersionNumber < SBVersionNumber(0, 8, 0)) {
+
+		colorRed   = (float)serializer->readUnsignedCharElement() / 255.0f;
+		colorGreen = (float)serializer->readUnsignedCharElement() / 255.0f;
+		colorBlue  = (float)serializer->readUnsignedCharElement() / 255.0f;
+
+	}
 
 	// Unserialize referenced atoms
 
@@ -252,13 +270,6 @@ void SEPathlineOfCenterOfMassVisualModel::eraseImplementation() {
 const SBDQuantity::length& SEPathlineOfCenterOfMassVisualModel::getRadius() const { return radius; }
 void SEPathlineOfCenterOfMassVisualModel::setRadius(const SBQuantity::length& r) { radius = r; update(); }
 
-const unsigned char& SEPathlineOfCenterOfMassVisualModel::getRed()		const { return colorRed; }
-const unsigned char& SEPathlineOfCenterOfMassVisualModel::getGreen()	const { return colorGreen; }
-const unsigned char& SEPathlineOfCenterOfMassVisualModel::getBlue()		const { return colorBlue; }
-void SEPathlineOfCenterOfMassVisualModel::setRed  (const unsigned char& c)	{ colorRed   = c; update(); }
-void SEPathlineOfCenterOfMassVisualModel::setGreen(const unsigned char& c)	{ colorGreen = c; update(); }
-void SEPathlineOfCenterOfMassVisualModel::setBlue (const unsigned char& c)	{ colorBlue  = c; update(); }
-
 void SEPathlineOfCenterOfMassVisualModel::update() {
 
 	SAMSON::requestViewportUpdate();
@@ -277,6 +288,22 @@ void SEPathlineOfCenterOfMassVisualModel::display() {
 
 		if (path->isErased()) continue;
 
+		// get color from the material if it is applied
+
+		if (getMaterial()) {
+
+			if (getMaterial()->getColorScheme()) {
+
+				float color[4];
+				getMaterial()->getColorScheme()->getColor(color);
+				colorRed   = color[0];
+				colorGreen = color[1];
+				colorBlue  = color[2];
+
+			}
+
+		}
+
 		const unsigned int numberOfSteps = path->getNumberOfSteps();
 		if (numberOfSteps == 0) continue;
 
@@ -284,21 +311,26 @@ void SEPathlineOfCenterOfMassVisualModel::display() {
 		if (pathAtomIndexer->size() == 0) continue;
 
 		// create an indexer with atoms which are present both in the path and in the user chosen atomIndexer
+
 		SBPointerIndexer<SBAtom> temporaryAtomIndexer;
 		SB_FOR(SBAtom* node, atomIndexer) {
+
 			if (node->isErased()) continue;
 			if (pathAtomIndexer->hasIndex(node))
 				temporaryAtomIndexer.addReferenceTarget(node);
+
 		}
 		const unsigned int numberOfAtoms = temporaryAtomIndexer.size();
 		if (numberOfAtoms == 0) continue;
 
 		// spheres
+
 		const unsigned int nSpheres = numberOfSteps;
 		float* positionDataForSpheres = new float[3 * nSpheres];
 		float* colorDataForSpheres = new float[4 * nSpheres];
 
 		// cylinders
+
 		const unsigned int nCylinders = numberOfSteps - 1;
 		const unsigned int nPositionsForCylinders = 2 * nCylinders; // the two end points
 		unsigned int* indexDataForCylinders = new unsigned int[2 * nCylinders]; // this should be of size 2 * cylinder, it will say for each end point at which position it should be
@@ -327,9 +359,9 @@ void SEPathlineOfCenterOfMassVisualModel::display() {
 			positionDataForSpheres[3 * is + 1] /= (float)numberOfAtoms;
 			positionDataForSpheres[3 * is + 2] /= (float)numberOfAtoms;
 
-			colorDataForSpheres[4 * is + 0] = (float)colorRed   / 255.0f;
-			colorDataForSpheres[4 * is + 1] = (float)colorGreen / 255.0f;
-			colorDataForSpheres[4 * is + 2] = (float)colorBlue  / 255.0f;
+			colorDataForSpheres[4 * is + 0] = colorRed;
+			colorDataForSpheres[4 * is + 1] = colorGreen;
+			colorDataForSpheres[4 * is + 2] = colorBlue;
 
 			colorDataForSpheres[4 * is + 3] = 1.0f; // non-transparent
 
@@ -427,19 +459,24 @@ void SEPathlineOfCenterOfMassVisualModel::displayForSelection() {
 		if (pathAtomIndexer->size() == 0) continue;
 
 		// create an indexer with atoms which are present both in the path and in the user chosen atomIndexer
+
 		SBPointerIndexer<SBAtom> temporaryAtomIndexer;
 		SB_FOR(SBAtom* node, atomIndexer) {
+
 			if (pathAtomIndexer->hasIndex(node))
 				temporaryAtomIndexer.addReferenceTarget(node);
+
 		}
 		const unsigned int numberOfAtoms = temporaryAtomIndexer.size();
 		if (numberOfAtoms == 0) continue;
 
 		// spheres
+
 		unsigned int nSpheres = numberOfSteps;
 		float* positionDataForSpheres = new float[3 * nSpheres];
 
 		// cylinders
+
 		unsigned int nCylinders = numberOfSteps - 1;
 		unsigned int nPositionsForCylinders = 2 * nCylinders; // the two end points
 		unsigned int* indexDataForCylinders = new unsigned int[2 * nCylinders]; // this should be of size 2 * cylinder, it will say for each end point at which position it should be
