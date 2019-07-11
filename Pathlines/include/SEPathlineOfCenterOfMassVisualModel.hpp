@@ -71,13 +71,6 @@ public :
 	const SBQuantity::length&									getRadius() const;
 	void														setRadius(const SBQuantity::length& r);
 
-	const unsigned char&										getRed() const;
-	const unsigned char&										getGreen() const;
-	const unsigned char&										getBlue() const;
-	void														setRed(const unsigned char& c);
-	void														setGreen(const unsigned char& c);
-	void														setBlue(const unsigned char& c);
-
 	//@}
 
 	void														update();
@@ -85,9 +78,9 @@ public :
 private:
 
 	SBQuantity::length											radius;																	///< radius of the pathline
-	unsigned char												colorRed;																///< red channel of the pathline color
-	unsigned char												colorGreen;																///< green channel of the pathline color
-	unsigned char												colorBlue;																///< blue channel of the pathline color
+	float														colorRed;																///< red channel of the pathline color
+	float														colorGreen;																///< green channel of the pathline color
+	float														colorBlue;																///< blue channel of the pathline color
 	SBPointerIndexer<SBAtom>									atomIndexer;															///< indexer of pointers to atoms for which pathlines should be created
 	SBPointerIndexer<SBPath>									pathIndexer;															///< indexer of pointers to paths for which pathlines should be created
 
