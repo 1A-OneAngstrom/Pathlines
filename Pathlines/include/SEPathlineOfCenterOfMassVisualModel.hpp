@@ -77,10 +77,10 @@ public :
 
 private:
 
-	SBQuantity::length											radius;																	///< radius of the pathline
-	float														colorRed;																///< red channel of the pathline color
-	float														colorGreen;																///< green channel of the pathline color
-	float														colorBlue;																///< blue channel of the pathline color
+	SBQuantity::length											radius     = SBQuantity::length(30);									///< radius of the pathline
+	float														colorRed   = 1.0f;														///< red channel of the pathline color
+	float														colorGreen = 0.0f;														///< green channel of the pathline color
+	float														colorBlue  = 0.0f;														///< blue channel of the pathline color
 	SBPointerIndexer<SBAtom>									atomIndexer;															///< indexer of pointers to atoms for which pathlines should be created
 	SBPointerIndexer<SBPath>									pathIndexer;															///< indexer of pointers to paths for which pathlines should be created
 

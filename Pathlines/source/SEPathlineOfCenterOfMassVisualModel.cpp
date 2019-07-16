@@ -19,12 +19,6 @@ SEPathlineOfCenterOfMassVisualModel::SEPathlineOfCenterOfMassVisualModel(const S
 	// the center of mass of a group of atoms, you might want to connect to the atoms' base signals (e.g. to update the center of mass when an atom is erased) and
 	// the atoms' structural signals (e.g. to update the center of mass when an atom is moved).
 
-	radius = SBQuantity::length(30);	// set a default radius
-
-	colorRed   = 1.0f;					// set a default color
-	colorGreen = 0.0f;
-	colorBlue  = 0.0f;
-
 	// nodeIndexer may contain both atoms and paths
 
 	SBNodeIndexer temporaryPathIndexer;
@@ -66,15 +60,6 @@ SEPathlineOfCenterOfMassVisualModel::~SEPathlineOfCenterOfMassVisualModel() {
 
 	disconnectBaseSignalFromSlot(this, SB_SLOT(&SEPathlineOfCenterOfMassVisualModel::onBaseEvent));
 
-#ifdef _WIN32
-
-#elif __APPLE__
-
-#elif __linux__
-	if (getMaterial())
-		removeMaterial();
-#endif
-
 }
 
 bool SEPathlineOfCenterOfMassVisualModel::isSerializable() const {
@@ -105,9 +90,9 @@ void SEPathlineOfCenterOfMassVisualModel::serialize(SBCSerializer* serializer, c
 
 	if (sdkVersionNumber < SBVersionNumber(0, 8, 0)) {
 
-		serializer->writeUnsignedCharElement("colorRed", colorRed);
-		serializer->writeUnsignedCharElement("colorGreen", colorGreen);
-		serializer->writeUnsignedCharElement("colorBlue", colorBlue);
+		serializer->writeUnsignedCharElement("colorRed",   (unsigned char)(255 * colorRed));
+		serializer->writeUnsignedCharElement("colorGreen", (unsigned char)(255 * colorGreen));
+		serializer->writeUnsignedCharElement("colorBlue",  (unsigned char)(255 * colorBlue));
 
 	}
 
