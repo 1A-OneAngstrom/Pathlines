@@ -46,9 +46,7 @@ public :
 	/// \name Rendering
 	//@{
 
-	virtual void												display();																///< Displays the visual model
-	virtual void												displayForShadow();														///< Displays the visual model for shadow purposes
-	virtual void												displayForSelection();													///< Displays the visual model for selection purposes
+	virtual void												display(SBNode::RenderingPass renderingPass);							///< Displays the visual model
 
 	virtual void												expandBounds(SBIAPosition3& bounds) const;								///< Expands the bounds to make sure the visual model fits inside them
 
@@ -65,11 +63,17 @@ public :
 
 	//@}
 
-	/// \name Getter/setter functions
+	/// \name Radius
 	//@{
 
 	const SBQuantity::length&									getRadius() const;
 	void														setRadius(const SBQuantity::length& r);
+
+	bool														hasRadiusRange() const;
+	const SBQuantity::length&									getMinimumRadius() const;
+	const SBQuantity::length&									getMaximumRadius() const;
+	const SBQuantity::length&									getRadiusSingleStep() const;
+	std::string													getRadiusSuffix() const;
 
 	//@}
 
@@ -77,10 +81,17 @@ public :
 
 private:
 
-	SBQuantity::length											radius     = SBQuantity::length(30);									///< radius of the pathline
-	float														colorRed   = 1.0f;														///< red channel of the pathline color
-	float														colorGreen = 0.0f;														///< green channel of the pathline color
-	float														colorBlue  = 0.0f;														///< blue channel of the pathline color
+	SBPosition3													computePosition(const SBPath* path, const SBPointerIndexer<SBAtom>& atomIndexer, const unsigned int step);
+
+	SBQuantity::length											radius				= SBQuantity::angstrom(0.3);						///< radius of the pathline
+	SBQuantity::length											minimumRadius		= SBQuantity::angstrom(0.01);						///< minimum value of the pathline's radius
+	SBQuantity::length											maximumRadius		= SBQuantity::angstrom(0.8);						///< maximum value of the pathline's radius
+	SBQuantity::length											radiusSingleStep	= SBQuantity::angstrom(0.1);						///< single step fpr the pathline's radius
+
+	float														colorRed	= 1.0f;														///< red channel of the pathline color
+	float														colorGreen	= 0.0f;														///< green channel of the pathline color
+	float														colorBlue	= 0.0f;														///< blue channel of the pathline color
+
 	SBPointerIndexer<SBAtom>									atomIndexer;															///< indexer of pointers to atoms for which pathlines should be created
 	SBPointerIndexer<SBPath>									pathIndexer;															///< indexer of pointers to paths for which pathlines should be created
 

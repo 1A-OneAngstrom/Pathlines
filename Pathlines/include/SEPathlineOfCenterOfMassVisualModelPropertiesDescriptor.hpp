@@ -13,7 +13,7 @@ SB_CLASS_BEGIN(SEPathlineOfCenterOfMassVisualModelProperties);
 
 	SB_CLASS_TYPE(SBCClass::Properties);
 	SB_CLASS_DESCRIPTION("PathlineOfCenterOfMassVisualModelProperties");
-	SB_CLASS_VERSION_NUMBER("0.8.1")
+	SB_CLASS_VERSION_NUMBER("0.10.0")
 
 	SB_FACTORY_BEGIN;
 

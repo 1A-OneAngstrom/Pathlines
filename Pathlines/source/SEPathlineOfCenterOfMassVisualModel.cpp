@@ -48,8 +48,8 @@ SEPathlineOfCenterOfMassVisualModel::SEPathlineOfCenterOfMassVisualModel(const S
 
 	connectBaseSignalToSlot(this, SB_SLOT(&SEPathlineOfCenterOfMassVisualModel::onBaseEvent));
 
-	QString pathsStr(" paths");
-	if (pathIndexer.size() == 1) pathsStr = " path";
+	QString pathsStr(" path");
+	if ((pathIndexer.size() % 10) != 1) pathsStr += "s";
 	SAMSON::setStatusMessage(QString("Visual model: added ") + QString::number(pathIndexer.size()) + pathsStr + QString(" of the center of mass"), 0);
 
 }
@@ -83,16 +83,16 @@ void SEPathlineOfCenterOfMassVisualModel::serialize(SBCSerializer* serializer, c
 
 	// Write parameters
 
-	serializer->writeDoubleElement("radius", (double)radius.getValue());
+	serializer->writeDoubleElement("radius", static_cast<double>(radius.getValue()));
 
 	// In case of serializing for an old version of the Element for SAMSON SDK version number below 0.8.0, write additional parameters.
 	// See the Serialization section in Developers guide for more information.
 
 	if (sdkVersionNumber < SBVersionNumber(0, 8, 0)) {
 
-		serializer->writeUnsignedCharElement("colorRed",   (unsigned char)(255 * colorRed));
-		serializer->writeUnsignedCharElement("colorGreen", (unsigned char)(255 * colorGreen));
-		serializer->writeUnsignedCharElement("colorBlue",  (unsigned char)(255 * colorBlue));
+		serializer->writeUnsignedCharElement("colorRed",   static_cast<unsigned char>(255 * colorRed));
+		serializer->writeUnsignedCharElement("colorGreen", static_cast<unsigned char>(255 * colorGreen));
+		serializer->writeUnsignedCharElement("colorBlue",  static_cast<unsigned char>(255 * colorBlue));
 
 	}
 
@@ -176,9 +176,9 @@ void SEPathlineOfCenterOfMassVisualModel::unserialize(SBCSerializer* serializer,
 
 	if (sdkVersionNumber < SBVersionNumber(0, 8, 0)) {
 
-		colorRed   = (float)serializer->readUnsignedCharElement() / 255.0f;
-		colorGreen = (float)serializer->readUnsignedCharElement() / 255.0f;
-		colorBlue  = (float)serializer->readUnsignedCharElement() / 255.0f;
+		colorRed   = static_cast<float>(serializer->readUnsignedCharElement()) / 255.0f;
+		colorGreen = static_cast<float>(serializer->readUnsignedCharElement()) / 255.0f;
+		colorBlue  = static_cast<float>(serializer->readUnsignedCharElement()) / 255.0f;
 
 	}
 
@@ -252,8 +252,29 @@ void SEPathlineOfCenterOfMassVisualModel::eraseImplementation() {
 
 }
 
-const SBDQuantity::length& SEPathlineOfCenterOfMassVisualModel::getRadius() const { return radius; }
-void SEPathlineOfCenterOfMassVisualModel::setRadius(const SBQuantity::length& r) { radius = r; update(); }
+const SBDQuantity::length&	SEPathlineOfCenterOfMassVisualModel::getRadius() const { return radius; }
+void						SEPathlineOfCenterOfMassVisualModel::setRadius(const SBQuantity::length& radius) {
+
+	SBQuantity::length prevValue = this->radius;
+
+	if (hasRadiusRange()) {
+
+		if      (radius < getMinimumRadius()) this->radius = getMinimumRadius();
+		else if (radius > getMaximumRadius()) this->radius = getMaximumRadius();
+		else this->radius = radius;
+
+	}
+	else
+		this->radius = radius;
+
+	if (this->radius != prevValue) update();
+
+}
+bool						SEPathlineOfCenterOfMassVisualModel::hasRadiusRange() const { return true; }
+const SBQuantity::length&	SEPathlineOfCenterOfMassVisualModel::getMinimumRadius() const { return minimumRadius; }
+const SBQuantity::length&	SEPathlineOfCenterOfMassVisualModel::getMaximumRadius() const { return maximumRadius; }
+const SBQuantity::length&	SEPathlineOfCenterOfMassVisualModel::getRadiusSingleStep() const { return radiusSingleStep; }
+std::string					SEPathlineOfCenterOfMassVisualModel::getRadiusSuffix() const { return std::string(""); }
 
 void SEPathlineOfCenterOfMassVisualModel::update() {
 
@@ -261,33 +282,40 @@ void SEPathlineOfCenterOfMassVisualModel::update() {
 
 }
 
-void SEPathlineOfCenterOfMassVisualModel::display() {
+void SEPathlineOfCenterOfMassVisualModel::display(SBNode::RenderingPass renderingPass) {
 
 	// SAMSON Element generator pro tip: this function is called by SAMSON during the main rendering loop. This is the main function of your visual model. 
 	// Implement this function to display things in SAMSON, for example thanks to the utility functions provided by SAMSON (e.g. displaySpheres, displayTriangles, etc.)
 
+	if (renderingPass != SBNode::RenderingPass::OpaqueGeometry &&
+		renderingPass != SBNode::RenderingPass::ShadowingGeometry &&
+		renderingPass != SBNode::RenderingPass::SelectableGeometry)
+		return;
+
 	if (pathIndexer.size() == 0) return;
 	if (atomIndexer.size() == 0) return;
+
+	const unsigned int nodeIndex = getNodeIndex();
+
+	// get color from the material if it is applied
+
+	if (getMaterial()) {
+
+		if (getMaterial()->getColorScheme()) {
+
+			float color[4];
+			getMaterial()->getColorScheme()->getColor(color);
+			colorRed   = color[0];
+			colorGreen = color[1];
+			colorBlue  = color[2];
+
+		}
+
+	}
 
 	SB_FOR(SBPath* path, pathIndexer) {
 
 		if (path->isErased()) continue;
-
-		// get color from the material if it is applied
-
-		if (getMaterial()) {
-
-			if (getMaterial()->getColorScheme()) {
-
-				float color[4];
-				getMaterial()->getColorScheme()->getColor(color);
-				colorRed   = color[0];
-				colorGreen = color[1];
-				colorBlue  = color[2];
-
-			}
-
-		}
 
 		const unsigned int numberOfSteps = path->getNumberOfSteps();
 		if (numberOfSteps == 0) continue;
@@ -308,104 +336,121 @@ void SEPathlineOfCenterOfMassVisualModel::display() {
 		const unsigned int numberOfAtoms = temporaryAtomIndexer.size();
 		if (numberOfAtoms == 0) continue;
 
-		// spheres
-
-		const unsigned int nSpheres = numberOfSteps;
-		float* positionDataForSpheres = new float[3 * nSpheres];
-		float* colorDataForSpheres = new float[4 * nSpheres];
-
 		// cylinders
 
 		const unsigned int nCylinders = numberOfSteps - 1;
-		const unsigned int nPositionsForCylinders = 2 * nCylinders; // the two end points
-		unsigned int* indexDataForCylinders = new unsigned int[2 * nCylinders]; // this should be of size 2 * cylinder, it will say for each end point at which position it should be
-		float *positionDataForCylinders = new float[3 * nPositionsForCylinders]; // all the coordinates X Y Z of each positions,
-		float *radiusDataForCylinders = new float[2 * nCylinders]; // the radius of the two end points of the cylinder (can be different to make a cone)
-		float *colorDataForCylinders = new float[4 * 2 * nCylinders]; // the ARGB code for each end point of a cylinder
-		unsigned int *flagDataForCylinders = new unsigned int[2 * nCylinders]; // controls if the cylinder is highlighted, selected
+		const unsigned int nPositionsForCylinders = 2 * nCylinders;					// the two end points
+		unsigned int* indexDataForCylinders = new unsigned int[2 * nCylinders];		// this should be of size 2 * cylinder, it will say for each end point at which position it should be
+		float *positionDataForCylinders = new float[3 * nPositionsForCylinders];	// all the coordinates X Y Z of each positions,
+		float *radiusDataForCylinders = new float[2 * nCylinders];					// the radius of the two end points of the cylinder (can be different to make a cone)
+		float *colorDataForCylinders = nullptr;										// the ARGB code for each end point of a cylinder
+		unsigned int *flagDataForCylinders = nullptr;								// flags
+		unsigned int *nodeIndexDataForCylinders = nullptr;							// controls if the cylinder is highlighted, selected
 
-		for (unsigned int is = 0; is < numberOfSteps; is++) {
 
-			positionDataForSpheres[3 * is + 0] = 0.0;
-			positionDataForSpheres[3 * is + 1] = 0.0;
-			positionDataForSpheres[3 * is + 2] = 0.0;
+		if (renderingPass == SBNode::RenderingPass::OpaqueGeometry) {
 
-			for (unsigned int ia = 0; ia < numberOfAtoms; ia++) {
-
-				SBPosition3 position;
-				path->getPosition(is, temporaryAtomIndexer[ia], position);
-				positionDataForSpheres[3 * is + 0] += (float)position.v[0].getValue();
-				positionDataForSpheres[3 * is + 1] += (float)position.v[1].getValue();
-				positionDataForSpheres[3 * is + 2] += (float)position.v[2].getValue();
-
-			}
-
-			positionDataForSpheres[3 * is + 0] /= (float)numberOfAtoms;
-			positionDataForSpheres[3 * is + 1] /= (float)numberOfAtoms;
-			positionDataForSpheres[3 * is + 2] /= (float)numberOfAtoms;
-
-			colorDataForSpheres[4 * is + 0] = colorRed;
-			colorDataForSpheres[4 * is + 1] = colorGreen;
-			colorDataForSpheres[4 * is + 2] = colorBlue;
-
-			colorDataForSpheres[4 * is + 3] = 1.0f; // non-transparent
+			colorDataForCylinders = new float[4 * 2 * nCylinders];
+			flagDataForCylinders = new unsigned int[2 * nCylinders];
 
 		}
+
+		if (renderingPass == SBNode::RenderingPass::SelectableGeometry)
+			nodeIndexDataForCylinders = new unsigned int[2 * nCylinders];
+
+		SBPosition3 position2 = computePosition(path, temporaryAtomIndexer, 0);
+		SBPosition3 position1 = position2;
+
+		unsigned int is2, is6, is8;
 
 		for (unsigned int is = 0; is < numberOfSteps - 1; is++) {
 
-			positionDataForCylinders[6 * is + 0] = positionDataForSpheres[3 * is + 0];
-			positionDataForCylinders[6 * is + 1] = positionDataForSpheres[3 * is + 1];
-			positionDataForCylinders[6 * is + 2] = positionDataForSpheres[3 * is + 2];
-			positionDataForCylinders[6 * is + 3] = positionDataForSpheres[3 * (is + 1) + 0];
-			positionDataForCylinders[6 * is + 4] = positionDataForSpheres[3 * (is + 1) + 1];
-			positionDataForCylinders[6 * is + 5] = positionDataForSpheres[3 * (is + 1) + 2];
+			is2 = 2 * is;
+			is6 = 6 * is;
+			is8 = 8 * is;
 
-			radiusDataForCylinders[2 * is + 0] = radius.getValue();
-			radiusDataForCylinders[2 * is + 1] = radius.getValue();
+			position1 = position2;
+			position2 = computePosition(path, temporaryAtomIndexer, is + 1);
 
-			indexDataForCylinders[2 * is + 0] = 2 * is + 0;
-			indexDataForCylinders[2 * is + 1] = 2 * is + 1;
+			positionDataForCylinders[is6    ] = static_cast<float>(position1.v[0].getValue());
+			positionDataForCylinders[is6 + 1] = static_cast<float>(position1.v[1].getValue());
+			positionDataForCylinders[is6 + 2] = static_cast<float>(position1.v[2].getValue());
+			positionDataForCylinders[is6 + 3] = static_cast<float>(position2.v[0].getValue());
+			positionDataForCylinders[is6 + 4] = static_cast<float>(position2.v[1].getValue());
+			positionDataForCylinders[is6 + 5] = static_cast<float>(position2.v[2].getValue());
 
-			colorDataForCylinders[8 * is + 0] = colorDataForSpheres[4 * is + 0];
-			colorDataForCylinders[8 * is + 1] = colorDataForSpheres[4 * is + 1];
-			colorDataForCylinders[8 * is + 2] = colorDataForSpheres[4 * is + 2];
-			colorDataForCylinders[8 * is + 3] = colorDataForSpheres[4 * is + 3];
-			colorDataForCylinders[8 * is + 4] = colorDataForSpheres[4 * (is + 1) + 0];
-			colorDataForCylinders[8 * is + 5] = colorDataForSpheres[4 * (is + 1) + 1];
-			colorDataForCylinders[8 * is + 6] = colorDataForSpheres[4 * (is + 1) + 2];
-			colorDataForCylinders[8 * is + 7] = colorDataForSpheres[4 * (is + 1) + 3];
+			radiusDataForCylinders[is2    ] = static_cast<float>(radius.getValue());
+			radiusDataForCylinders[is2 + 1] = static_cast<float>(radius.getValue());
 
-			flagDataForCylinders[2* is + 0] = path->getInheritedFlags() | getInheritedFlags();
-			flagDataForCylinders[2* is + 1] = path->getInheritedFlags() | getInheritedFlags();
+			indexDataForCylinders[is2    ] = is2;
+			indexDataForCylinders[is2 + 1] = is2 + 1;
+
+			if (renderingPass == SBNode::RenderingPass::OpaqueGeometry) {
+
+				colorDataForCylinders[is8    ] = colorRed;
+				colorDataForCylinders[is8 + 1] = colorGreen;
+				colorDataForCylinders[is8 + 2] = colorBlue;
+				colorDataForCylinders[is8 + 3] = 1.0f;
+				colorDataForCylinders[is8 + 4] = colorRed;
+				colorDataForCylinders[is8 + 5] = colorGreen;
+				colorDataForCylinders[is8 + 6] = colorBlue;
+				colorDataForCylinders[is8 + 7] = 1.0f;
+
+				flagDataForCylinders[is2    ] = path->getInheritedFlags() | getInheritedFlags();
+				flagDataForCylinders[is2 + 1] = path->getInheritedFlags() | getInheritedFlags();
+
+			}
+
+			if (renderingPass == SBNode::RenderingPass::SelectableGeometry) {
+
+				nodeIndexDataForCylinders[is2 + 0] = nodeIndex;
+				nodeIndexDataForCylinders[is2 + 1] = nodeIndex;
+
+			}
 
 		}
 
-		// enable Alpha blending in case of enabled transparency
-//		glEnable(GL_BLEND);
-//		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-//		glEnable(GL_DEPTH_TEST);
+		if (renderingPass == SBNode::RenderingPass::OpaqueGeometry) {
 
-		SAMSON::displayLineSweptSpheres(nCylinders,
-										nPositionsForCylinders,
-										indexDataForCylinders,
-										positionDataForCylinders,
-										radiusDataForCylinders,
-										colorDataForCylinders,
-										flagDataForCylinders);
+			// display opaque geometry
 
-		// disable Alpha blending
-//		glEnable(GL_DEPTH_TEST);
-//		glDisable(GL_BLEND);
+			// enable Alpha blending in case of enabled transparency
+			//glEnable(GL_BLEND);
+			//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			//glEnable(GL_DEPTH_TEST);
 
-		delete[] positionDataForSpheres;
-		delete[] colorDataForSpheres;
+			SAMSON::displayLineSweptSpheres(nCylinders, nPositionsForCylinders, indexDataForCylinders, positionDataForCylinders, radiusDataForCylinders,
+											colorDataForCylinders, flagDataForCylinders, false, true);
 
-		delete[] indexDataForCylinders;
-		delete[] positionDataForCylinders;
-		delete[] radiusDataForCylinders;
-		delete[] colorDataForCylinders;
-		delete[] flagDataForCylinders;
+			// disable Alpha blending
+			//glEnable(GL_DEPTH_TEST);
+			//glDisable(GL_BLEND);
+
+		}
+		else if (renderingPass == SBNode::RenderingPass::ShadowingGeometry) {
+
+			// display for shadows
+
+			SAMSON::displayLineSweptSpheres(nCylinders, nPositionsForCylinders, indexDataForCylinders, positionDataForCylinders, radiusDataForCylinders,
+											nullptr, nullptr, true, true);
+
+		}
+		else if (renderingPass == SBNode::RenderingPass::SelectableGeometry) {
+
+			// display for selection
+
+			SAMSON::displayLineSweptSpheresSelection(nCylinders, nPositionsForCylinders, indexDataForCylinders, positionDataForCylinders, radiusDataForCylinders, nodeIndexDataForCylinders);
+
+		}
+
+		if (indexDataForCylinders) delete[] indexDataForCylinders;
+		if (positionDataForCylinders) delete[] positionDataForCylinders;
+		if (radiusDataForCylinders) delete[] radiusDataForCylinders;
+		if (colorDataForCylinders) delete[] colorDataForCylinders;
+		if (flagDataForCylinders) delete[] flagDataForCylinders;
+
+		if (nodeIndexDataForCylinders) delete[] nodeIndexDataForCylinders;
+
 
 		temporaryAtomIndexer.clear();
 
@@ -413,120 +458,25 @@ void SEPathlineOfCenterOfMassVisualModel::display() {
 
 }
 
-void SEPathlineOfCenterOfMassVisualModel::displayForShadow() {
+SBPosition3 SEPathlineOfCenterOfMassVisualModel::computePosition(const SBPath* path, const SBPointerIndexer<SBAtom>& atomIndexer, const unsigned int step) {
 
-	// SAMSON Element generator pro tip: this function is called by SAMSON during the main rendering loop in order to compute shadows. 
-	// Implement this function so that your visual model can cast shadows to other objects in SAMSON, for example thanks to the utility
-	// functions provided by SAMSON (e.g. displaySpheres, displayTriangles, etc.)
+	SBPosition3 avgPosition(SBQuantity::position(0.0));
 
-	display();
+	if (path) {
 
-}
+		for (unsigned int ia = 0; ia < atomIndexer.size(); ia++) {
 
-void SEPathlineOfCenterOfMassVisualModel::displayForSelection() {
-
-	// SAMSON Element generator pro tip: this function is called by SAMSON during the main rendering loop in order to perform object picking.
-	// Instead of rendering colors, your visual model is expected to write the index of a data graph node (obtained with getIndex()).
-	// Implement this function so that your visual model can be selected (if you render its own index) or can be used to select other objects (if you render 
-	// the other objects' indices), for example thanks to the utility functions provided by SAMSON (e.g. displaySpheresSelection, displayTrianglesSelection, etc.)
-
-	if (pathIndexer.size() == 0) return;
-	if (atomIndexer.size() == 0) return;
-
-	const unsigned int nodeIndex = getNodeIndex();
-
-	SB_FOR(SBPath* path, pathIndexer) {
-
-		const unsigned int numberOfSteps = path->getNumberOfSteps();
-		if (numberOfSteps == 0) continue;
-
-		const SBPointerIndexer<SBStructuralParticle>* pathAtomIndexer = path->getStructuralParticleIndexer();
-		if (pathAtomIndexer->size() == 0) continue;
-
-		// create an indexer with atoms which are present both in the path and in the user chosen atomIndexer
-
-		SBPointerIndexer<SBAtom> temporaryAtomIndexer;
-		SB_FOR(SBAtom* node, atomIndexer) {
-
-			if (pathAtomIndexer->hasIndex(node))
-				temporaryAtomIndexer.addReferenceTarget(node);
-
-		}
-		const unsigned int numberOfAtoms = temporaryAtomIndexer.size();
-		if (numberOfAtoms == 0) continue;
-
-		// spheres
-
-		unsigned int nSpheres = numberOfSteps;
-		float* positionDataForSpheres = new float[3 * nSpheres];
-
-		// cylinders
-
-		unsigned int nCylinders = numberOfSteps - 1;
-		unsigned int nPositionsForCylinders = 2 * nCylinders; // the two end points
-		unsigned int* indexDataForCylinders = new unsigned int[2 * nCylinders]; // this should be of size 2 * cylinder, it will say for each end point at which position it should be
-		float *positionDataForCylinders = new float[3 * nPositionsForCylinders]; // all the coordinates X Y Z of each positions,
-		float *radiusDataForCylinders = new float[2 * nCylinders]; // the radius of the two end points of the cylinder (can be different to make a cone)
-		unsigned int *nodeIndexDataForCylinders = new unsigned int[2 * nCylinders]; // controls if the cylinder is highlighted, selected
-
-		for (unsigned int is = 0; is < numberOfSteps; is++) {
-
-			positionDataForSpheres[3 * is + 0] = 0.0;
-			positionDataForSpheres[3 * is + 1] = 0.0;
-			positionDataForSpheres[3 * is + 2] = 0.0;
-
-			for (unsigned int ia = 0; ia < numberOfAtoms; ia++) {
-
-				SBPosition3 position;
-				path->getPosition(is, temporaryAtomIndexer[ia], position);
-				positionDataForSpheres[3 * is + 0] += (float)position.v[0].getValue();
-				positionDataForSpheres[3 * is + 1] += (float)position.v[1].getValue();
-				positionDataForSpheres[3 * is + 2] += (float)position.v[2].getValue();
-
-			}
-
-			positionDataForSpheres[3 * is + 0] /= (float)numberOfAtoms;
-			positionDataForSpheres[3 * is + 1] /= (float)numberOfAtoms;
-			positionDataForSpheres[3 * is + 2] /= (float)numberOfAtoms;
+			SBPosition3 position;
+			path->getPosition(step, atomIndexer[ia], position);
+			avgPosition += position;
 
 		}
 
-		for (unsigned int is = 0; is < numberOfSteps - 1; is++) {
-
-			positionDataForCylinders[6 * is + 0] = positionDataForSpheres[3 * is + 0];
-			positionDataForCylinders[6 * is + 1] = positionDataForSpheres[3 * is + 1];
-			positionDataForCylinders[6 * is + 2] = positionDataForSpheres[3 * is + 2];
-			positionDataForCylinders[6 * is + 3] = positionDataForSpheres[3 * (is + 1) + 0];
-			positionDataForCylinders[6 * is + 4] = positionDataForSpheres[3 * (is + 1) + 1];
-			positionDataForCylinders[6 * is + 5] = positionDataForSpheres[3 * (is + 1) + 2];
-
-			radiusDataForCylinders[2 * is + 0] = radius.getValue();
-			radiusDataForCylinders[2 * is + 1] = radius.getValue();
-
-			indexDataForCylinders[2 * is + 0] = 2 * is + 0;
-			indexDataForCylinders[2 * is + 1] = 2 * is + 1;
-
-			nodeIndexDataForCylinders[2* is + 0] = nodeIndex;
-			nodeIndexDataForCylinders[2* is + 1] = nodeIndex;
-
-		}
-
-		SAMSON::displayLineSweptSpheresSelection(nCylinders,
-										nPositionsForCylinders,
-										indexDataForCylinders,
-										positionDataForCylinders,
-										radiusDataForCylinders,
-										nodeIndexDataForCylinders);
-
-
-		delete[] positionDataForSpheres;
-
-		delete[] indexDataForCylinders;
-		delete[] positionDataForCylinders;
-		delete[] radiusDataForCylinders;
-		delete[] nodeIndexDataForCylinders;
+		avgPosition /= static_cast<float>(atomIndexer.size());
 
 	}
+
+	return avgPosition;
 
 }
 

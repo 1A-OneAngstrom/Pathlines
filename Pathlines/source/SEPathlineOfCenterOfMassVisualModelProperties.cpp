@@ -5,7 +5,7 @@
 
 SEPathlineOfCenterOfMassVisualModelProperties::SEPathlineOfCenterOfMassVisualModelProperties() {
 
-	visualModel = 0;
+	visualModel = nullptr;
 	ui.setupUi( this );
 	observer = new Observer(this);
 
@@ -22,7 +22,7 @@ SEPathlineOfCenterOfMassVisualModelProperties::~SEPathlineOfCenterOfMassVisualMo
 
 void SEPathlineOfCenterOfMassVisualModelProperties::loadSettings( SBGSettings *settings ) {
 
-	if ( settings == 0 ) return;
+	if ( settings == nullptr ) return;
 	
 	// SAMSON Element generator pro tip: complete this function so this property window can save its GUI state from one session to the next
 
@@ -30,7 +30,7 @@ void SEPathlineOfCenterOfMassVisualModelProperties::loadSettings( SBGSettings *s
 
 void SEPathlineOfCenterOfMassVisualModelProperties::saveSettings( SBGSettings *settings ) {
 
-	if ( settings == 0 ) return;
+	if ( settings == nullptr ) return;
 
 	// SAMSON Element generator pro tip: complete this function so this property window can save its GUI state from one session to the next
 
