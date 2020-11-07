@@ -49,7 +49,7 @@ SEPathlineOfCenterOfMassVisualModel::SEPathlineOfCenterOfMassVisualModel(const S
 	connectBaseSignalToSlot(this, SB_SLOT(&SEPathlineOfCenterOfMassVisualModel::onBaseEvent));
 
 	QString pathsStr(" path");
-	if ((pathIndexer.size() % 10) != 1) pathsStr += "s";
+	if (pathIndexer.size() != 1) pathsStr += "s";
 	SAMSON::setStatusMessage(QString("Visual model: added ") + QString::number(pathIndexer.size()) + pathsStr + QString(" of the center of mass"), 0);
 
 }
@@ -255,26 +255,28 @@ void SEPathlineOfCenterOfMassVisualModel::eraseImplementation() {
 const SBDQuantity::length&	SEPathlineOfCenterOfMassVisualModel::getRadius() const { return radius; }
 void						SEPathlineOfCenterOfMassVisualModel::setRadius(const SBQuantity::length& radius) {
 
-	SBQuantity::length prevValue = this->radius;
+	if (this->radius != radius) {
 
-	if (hasRadiusRange()) {
-
-		if      (radius < getMinimumRadius()) this->radius = getMinimumRadius();
-		else if (radius > getMaximumRadius()) this->radius = getMaximumRadius();
+		if      (hasRadiusRange() && radius < getMinimumRadius()) this->radius = getMinimumRadius();
+		else if (hasRadiusRange() && radius > getMaximumRadius()) this->radius = getMaximumRadius();
 		else this->radius = radius;
 
-	}
-	else
-		this->radius = radius;
+		update();
 
-	if (this->radius != prevValue) update();
+	}
 
 }
 bool						SEPathlineOfCenterOfMassVisualModel::hasRadiusRange() const { return true; }
+const SBQuantity::length&	SEPathlineOfCenterOfMassVisualModel::getDefaultRadius() const { return defaultRadius; }
 const SBQuantity::length&	SEPathlineOfCenterOfMassVisualModel::getMinimumRadius() const { return minimumRadius; }
 const SBQuantity::length&	SEPathlineOfCenterOfMassVisualModel::getMaximumRadius() const { return maximumRadius; }
 const SBQuantity::length&	SEPathlineOfCenterOfMassVisualModel::getRadiusSingleStep() const { return radiusSingleStep; }
-std::string					SEPathlineOfCenterOfMassVisualModel::getRadiusSuffix() const { return std::string(""); }
+std::string					SEPathlineOfCenterOfMassVisualModel::getRadiusSuffix() const {
+	
+	// the suffix for SBQuantity types are determined automatically
+	return std::string("");
+
+}
 
 void SEPathlineOfCenterOfMassVisualModel::update() {
 
