@@ -10,12 +10,12 @@
 
 SB_ELEMENT_DESCRIPTION("Visual model for a pathline of the center of mass of selected nodes based on a Path");
 SB_ELEMENT_DOCUMENTATION("Resource/Documentation/doc.html");
-SB_ELEMENT_VERSION_NUMBER("0.10.0");
+SB_ELEMENT_VERSION_NUMBER("1.0.0");
 
 SB_ELEMENT_CLASSES_BEGIN;
 
 	SB_ELEMENT_CLASS(SEPathlineOfCenterOfMassVisualModel);
-	//SB_ELEMENT_CLASS(SEPathlineOfCenterOfMassVisualModelProperties); // this visual model has no properties
+	//SB_ELEMENT_CLASS(SEPathlineOfCenterOfMassVisualModelProperties); // this visual model has no property window
 
 SB_ELEMENT_CLASSES_END;
 

@@ -70,6 +70,7 @@ public :
 	void														setRadius(const SBQuantity::length& r);
 
 	bool														hasRadiusRange() const;
+	const SBQuantity::length&									getDefaultRadius() const;
 	const SBQuantity::length&									getMinimumRadius() const;
 	const SBQuantity::length&									getMaximumRadius() const;
 	const SBQuantity::length&									getRadiusSingleStep() const;
@@ -84,6 +85,7 @@ private:
 	SBPosition3													computePosition(const SBPath* path, const SBPointerIndexer<SBAtom>& atomIndexer, const unsigned int step);
 
 	SBQuantity::length											radius				= SBQuantity::angstrom(0.3);						///< radius of the pathline
+	SBQuantity::length											defaultRadius		= SBQuantity::angstrom(0.3);						///< default value of the pathline's radius
 	SBQuantity::length											minimumRadius		= SBQuantity::angstrom(0.01);						///< minimum value of the pathline's radius
 	SBQuantity::length											maximumRadius		= SBQuantity::angstrom(0.8);						///< maximum value of the pathline's radius
 	SBQuantity::length											radiusSingleStep	= SBQuantity::angstrom(0.1);						///< single step fpr the pathline's radius

@@ -13,7 +13,7 @@ SB_CLASS_BEGIN(SEPathlineOfCenterOfMassVisualModel);
 
 	SB_CLASS_TYPE(SBCClass::VisualModel);
 	SB_CLASS_DESCRIPTION("Pathline of the center of mass");
-	SB_CLASS_VERSION_NUMBER("0.10.0");
+	SB_CLASS_VERSION_NUMBER("1.0.0");
 
 	SB_FACTORY_BEGIN;
 
@@ -24,7 +24,7 @@ SB_CLASS_BEGIN(SEPathlineOfCenterOfMassVisualModel);
 
 	SB_INTERFACE_BEGIN;
 
-		SB_ATTRIBUTE_READ_WRITE_RANGE(const SBQuantity::length&, SEPathlineOfCenterOfMassVisualModel, Radius, "Radius", "Geometry");
+		SB_ATTRIBUTE_READ_WRITE_RESET_RANGE(const SBQuantity::length&, SEPathlineOfCenterOfMassVisualModel, Radius, "Radius", "Geometry");
 
 	SB_INTERFACE_END;
 
