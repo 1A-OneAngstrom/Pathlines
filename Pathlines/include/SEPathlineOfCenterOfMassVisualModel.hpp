@@ -11,7 +11,7 @@
 
 /// This class implements a visual model
 
-class SEPathlineOfCenterOfMassVisualModel : public SBMVisualModel {
+class SB_EXPORT SEPathlineOfCenterOfMassVisualModel : public SBMVisualModel {
 
 	SB_CLASS
 
