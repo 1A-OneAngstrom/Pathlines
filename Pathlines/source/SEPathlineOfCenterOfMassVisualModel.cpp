@@ -26,19 +26,19 @@ SEPathlineOfCenterOfMassVisualModel::SEPathlineOfCenterOfMassVisualModel(const S
 
 	SB_FOR(SBNode* node, nodeIndexer) {
 
-		node->getNodes(temporaryPathIndexer, SBNode::IsType(SBNode::Path));							// get Path nodes from the nodeIndexer and add them to the temporaru indexer
-		node->getNodes(temporaryAtomIndexer, SBNode::IsType(SBNode::Atom));							// get Atom nodes from the nodeIndexer and add them to the temporaru indexer
+		node->getNodes(temporaryPathIndexer, SBNode::Path);							// get Path nodes from the nodeIndexer and add them to the temporaru indexer
+		node->getNodes(temporaryAtomIndexer, SBNode::Atom);							// get Atom nodes from the nodeIndexer and add them to the temporaru indexer
 
 	}
 
-	if (temporaryPathIndexer.size() == 0)															// if no Paths selected
-		SAMSON::getActiveDocument()->getNodes(temporaryPathIndexer, SBNode::IsType(SBNode::Path));	// get all Paths from the active Document
+	if (temporaryPathIndexer.size() == 0)											// if no Paths selected
+		SAMSON::getActiveDocument()->getNodes(temporaryPathIndexer, SBNode::Path);	// get all Paths from the active Document
 
-	if (temporaryAtomIndexer.size() == 0)															// if no Atoms selected
-		SAMSON::getActiveDocument()->getNodes(temporaryAtomIndexer, SBNode::IsType(SBNode::Atom));	// get all Atoms from the active Document
+	if (temporaryAtomIndexer.size() == 0)											// if no Atoms selected
+		SAMSON::getActiveDocument()->getNodes(temporaryAtomIndexer, SBNode::Atom);	// get all Atoms from the active Document
 
 	SB_FOR(SBNode* node, temporaryPathIndexer)
-		pathIndexer.addReferenceTarget(node);														// add to the internal indexer references to the chosen Paths
+		pathIndexer.addReferenceTarget(node);										// add to the internal indexer references to the chosen Paths
 
 	SB_FOR(SBNode* node, temporaryAtomIndexer)
 		atomIndexer.addReferenceTarget(node);
