@@ -25,6 +25,7 @@ SB_CLASS_BEGIN(SEPathlineOfCenterOfMassVisualModel);
 	SB_INTERFACE_BEGIN;
 
 		SB_ATTRIBUTE_READ_WRITE_RESET_RANGE(const SBQuantity::length&, SEPathlineOfCenterOfMassVisualModel, Radius, "Radius", "Geometry");
+		SB_ATTRIBUTE_READ_ONLY(SBDDataGraphNodeMaterial*, SEPathlineOfCenterOfMassVisualModel, Material, "Material", "Display");
 
 	SB_INTERFACE_END;
 

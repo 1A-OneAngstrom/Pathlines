@@ -10,7 +10,7 @@
 
 SB_ELEMENT_DESCRIPTION("Visual model for a pathline of the center of mass of selected nodes based on a Path");
 SB_ELEMENT_DOCUMENTATION("Resource/Documentation/doc.html");
-SB_ELEMENT_VERSION_NUMBER("2.0.0");
+SB_ELEMENT_VERSION_NUMBER("3.0.0");
 
 SB_ELEMENT_CLASSES_BEGIN;
 
