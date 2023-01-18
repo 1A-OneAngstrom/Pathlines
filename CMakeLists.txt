@@ -39,20 +39,20 @@ ENDIF( SAMSON_SDK_PATH )
 
 
 #####################################
-# GETTING QT5_CMAKE_INCLUDE_DIR VAR #
+# GETTING QT_CMAKE_INCLUDE_DIR VAR #
 #####################################
 
-IF( QT5_CMAKE_INCLUDE_DIR )
-	FILE( TO_CMAKE_PATH ${QT5_CMAKE_INCLUDE_DIR} CMAKE_QT5_CMAKE_INCLUDE_DIR )
-ELSE( QT5_CMAKE_INCLUDE_DIR )
-	IF( DEFINED ENV{QT5_CMAKE_INCLUDE_DIR} )
-		FILE( TO_CMAKE_PATH $ENV{QT5_CMAKE_INCLUDE_DIR} CMAKE_QT5_CMAKE_INCLUDE_DIR )
-	ELSE( DEFINED ENV{QT5_CMAKE_INCLUDE_DIR} )
-		MESSAGE( "QT5_CMAKE_INCLUDE_DIR is not defined, it should be defined at cmake runtime or in environment variables" )
-	ENDIF( DEFINED ENV{QT5_CMAKE_INCLUDE_DIR} )
-ENDIF( QT5_CMAKE_INCLUDE_DIR )
+IF( QT_CMAKE_INCLUDE_DIR )
+	FILE( TO_CMAKE_PATH ${QT_CMAKE_INCLUDE_DIR} CMAKE_QT_CMAKE_INCLUDE_DIR )
+ELSE( QT_CMAKE_INCLUDE_DIR )
+	IF( DEFINED ENV{QT_CMAKE_INCLUDE_DIR} )
+		FILE( TO_CMAKE_PATH $ENV{QT_CMAKE_INCLUDE_DIR} CMAKE_QT_CMAKE_INCLUDE_DIR )
+	ELSE( DEFINED ENV{QT_CMAKE_INCLUDE_DIR} )
+		MESSAGE( "QT_CMAKE_INCLUDE_DIR is not defined, it should be defined at cmake runtime or in environment variables" )
+	ENDIF( DEFINED ENV{QT_CMAKE_INCLUDE_DIR} )
+ENDIF( QT_CMAKE_INCLUDE_DIR )
 
-SET ( CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} ${CMAKE_QT5_CMAKE_INCLUDE_DIR} )
+SET ( CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} ${CMAKE_QT_CMAKE_INCLUDE_DIR} )
 
 cmake_policy(SET CMP0020 NEW)
 
@@ -64,13 +64,13 @@ cmake_policy(SET CMP0020 NEW)
 IF( WIN32 )
 	IF( WINSDK_LIB_DIR )
 		FILE( TO_CMAKE_PATH ${WINSDK_LIB_DIR} CMAKE_WINSDK_LIB_DIR )
-	ELSE( QT5_CMAKE_INCLUDE_DIR )
+	ELSE( QT_CMAKE_INCLUDE_DIR )
 		IF( DEFINED ENV{WINSDK_LIB_DIR} )
 			FILE( TO_CMAKE_PATH $ENV{WINSDK_LIB_DIR} CMAKE_WINSDK_LIB_DIR )
 		ELSE( DEFINED ENV{WINSDK_LIB_DIR} )
 			MESSAGE( "WINSDK_LIB_DIR is not defined, it should be defined at cmake runtime or in environment variables" )		
 		ENDIF( DEFINED ENV{WINSDK_LIB_DIR} )
-	ENDIF( QT5_CMAKE_INCLUDE_DIR )
+	ENDIF( QT_CMAKE_INCLUDE_DIR )
 	SET ( CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} ${CMAKE_WINSDK_LIB_DIR} )
 ENDIF( WIN32 )
 
@@ -146,7 +146,7 @@ INCLUDE ( SDKVersion )
 MESSAGE( " " )
 MESSAGE( "=======================================  CMAKE SUMMARY PATHS  ========================================" )
 MESSAGE( "     SAMSON_SDK_PATH            = ${CMAKE_SAMSON_SDK_PATH} ")
-MESSAGE( "     QT5_CMAKE_INCLUDE_DIR      = ${CMAKE_QT5_CMAKE_INCLUDE_DIR}" )
+MESSAGE( "     QT_CMAKE_INCLUDE_DIR       = ${CMAKE_QT_CMAKE_INCLUDE_DIR}" )
 IF( WIN32 )
 MESSAGE( "     WINSDK_LIB_DIR             = ${CMAKE_WINSDK_LIB_DIR}" )
 ENDIF( WIN32 )
@@ -158,44 +158,78 @@ FILE( TO_CMAKE_PATH ${CMAKE_SAMSON_DEVELOPPER_DATA_PATH}/Elements CMAKE_SAMSON_E
 FIND_PACKAGE ( SAMSONSDK REQUIRED )
 
 SET(CMAKE_AUTOMOC ON)
-FIND_PACKAGE(Qt5Core REQUIRED) 
-FIND_PACKAGE(Qt5Gui REQUIRED) 
-FIND_PACKAGE(Qt5LinguistTools REQUIRED) 
-FIND_PACKAGE(Qt5Multimedia REQUIRED) 
-FIND_PACKAGE(Qt5MultimediaWidgets REQUIRED)
-FIND_PACKAGE(Qt5Network REQUIRED)
-FIND_PACKAGE(Qt5OpenGL REQUIRED) 
-FIND_PACKAGE(Qt5PrintSupport REQUIRED)
-FIND_PACKAGE(Qt5Sql REQUIRED) 
-FIND_PACKAGE(Qt5Widgets REQUIRED)
-FIND_PACKAGE(Qt5Xml REQUIRED)
+FIND_PACKAGE(Qt6Core REQUIRED) 
+FIND_PACKAGE(Qt6Gui REQUIRED) 
+FIND_PACKAGE(Qt6LinguistTools REQUIRED) 
+FIND_PACKAGE(Qt6Multimedia REQUIRED) 
+FIND_PACKAGE(Qt6MultimediaWidgets REQUIRED)
+FIND_PACKAGE(Qt6Network REQUIRED)
+FIND_PACKAGE(Qt6OpenGL REQUIRED) 
+FIND_PACKAGE(Qt6PrintSupport REQUIRED)
+FIND_PACKAGE(Qt6Sql REQUIRED) 
+FIND_PACKAGE(Qt6Widgets REQUIRED)
+FIND_PACKAGE(Qt6Xml REQUIRED)
 
-INCLUDE_DIRECTORIES(${Qt5Core_INCLUDE_DIRS})  
-INCLUDE_DIRECTORIES(${Qt5Gui_INCLUDE_DIRS}) 
-INCLUDE_DIRECTORIES(${Qt5LinguistTools_INCLUDE_DIRS})
-INCLUDE_DIRECTORIES(${Qt5Multimedia_INCLUDE_DIRS})
-INCLUDE_DIRECTORIES(${Qt5MultimediaWidgets_INCLUDE_DIRS})
-INCLUDE_DIRECTORIES(${Qt5Network_INCLUDE_DIRS})
-INCLUDE_DIRECTORIES(${Qt5OpenGL_INCLUDE_DIRS}) 
-INCLUDE_DIRECTORIES(${Qt5PrintSupport_INCLUDE_DIRS})
-INCLUDE_DIRECTORIES(${Qt5Sql_INCLUDE_DIRS})
-INCLUDE_DIRECTORIES(${Qt5Widgets_INCLUDE_DIRS}) 
-INCLUDE_DIRECTORIES(${Qt5Xml_INCLUDE_DIRS}) 
+INCLUDE_DIRECTORIES(${Qt6Core_INCLUDE_DIRS})  
+INCLUDE_DIRECTORIES(${Qt6Gui_INCLUDE_DIRS}) 
+INCLUDE_DIRECTORIES(${Qt6LinguistTools_INCLUDE_DIRS})
+INCLUDE_DIRECTORIES(${Qt6Multimedia_INCLUDE_DIRS})
+INCLUDE_DIRECTORIES(${Qt6MultimediaWidgets_INCLUDE_DIRS})
+INCLUDE_DIRECTORIES(${Qt6Network_INCLUDE_DIRS})
+INCLUDE_DIRECTORIES(${Qt6OpenGL_INCLUDE_DIRS}) 
+INCLUDE_DIRECTORIES(${Qt6PrintSupport_INCLUDE_DIRS})
+INCLUDE_DIRECTORIES(${Qt6Sql_INCLUDE_DIRS})
+INCLUDE_DIRECTORIES(${Qt6Widgets_INCLUDE_DIRS}) 
+INCLUDE_DIRECTORIES(${Qt6Xml_INCLUDE_DIRS}) 
 
-SET( QT_LIBRARIES	${Qt5Core_LIBRARIES}  
-					${Qt5Gui_LIBRARIES} 
-					${Qt5LinguistTools_LIBRARIES}
-					${Qt5Multimedia_LIBRARIES} 
-					${Qt5MultimediaWidgets_LIBRARIES} 
-					${Qt5Network_LIBRARIES} 
-					${Qt5OpenGL_LIBRARIES} 
-					${Qt5PrintSupport_LIBRARIES}
-					${Qt5Sql_LIBRARIES} 
-					${Qt5Widgets_LIBRARIES}
-					${Qt5Xml_LIBRARIES} 
+SET( QT_LIBRARIES	${Qt6Core_LIBRARIES}  
+					${Qt6Gui_LIBRARIES} 
+					${Qt6LinguistTools_LIBRARIES}
+					${Qt6Multimedia_LIBRARIES} 
+					${Qt6MultimediaWidgets_LIBRARIES} 
+					${Qt6Network_LIBRARIES} 
+					${Qt6OpenGL_LIBRARIES} 
+					${Qt6PrintSupport_LIBRARIES}
+					${Qt6Sql_LIBRARIES} 
+					${Qt6Widgets_LIBRARIES}
+					${Qt6Xml_LIBRARIES} 
 )
 
 FIND_PACKAGE ( OpenGL )
+
+set(QT_V 6)
+
+if(QT_V EQUAL 6)
+    
+    MESSAGE("OVERLOADING QT5 functions.")
+
+    function(qt5_wrap_ui outfiles)
+        message("OVERLOADED VERSION OF qt5_wrap_ui")
+        qt_wrap_ui("${outfiles}" ${ARGN})
+        set("${outfiles}" "${${outfiles}}" PARENT_SCOPE)
+    endfunction()
+    
+    
+    function(qt5_wrap_cpp outfiles)
+        message("OVERLOADED VERSION OF qt5_wrap_cpp")
+        qt_wrap_cpp("${outfiles}" ${ARGN})
+        set("${outfiles}" "${${outfiles}}" PARENT_SCOPE)
+    endfunction()
+    
+    function(qt5_add_resources)
+        message("OVERLOADED VERSION OF qt5_add_ressources")
+        qt_add_resources("${outfiles}" ${ARGN})
+        set("${outfiles}" "${${outfiles}}" PARENT_SCOPE)
+    endfunction()
+    
+    
+    function(qt5_add_translation outfiles)
+        message("OVERLOADED VERSION OF qt5_add_translation")
+        qt_add_translation("${outfiles}" ${ARGN})
+        set("${outfiles}" "${${outfiles}}" PARENT_SCOPE)
+    endfunction()
+    
+endif()
 
 ##########################
 # SAMSON Element folders #

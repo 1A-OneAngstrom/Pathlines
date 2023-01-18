@@ -322,7 +322,7 @@ void SEPathlineOfCenterOfMassVisualModel::display(SBNode::RenderingPass renderin
 		const unsigned int numberOfSteps = path->getNumberOfSteps();
 		if (numberOfSteps == 0) continue;
 
-		const SBPointerIndexer<SBStructuralParticle>* pathAtomIndexer = path->getStructuralParticleIndexer();
+		const SBPointerIndexer<SBAtom>* pathAtomIndexer = path->getAtomIndexer();
 		if (pathAtomIndexer->size() == 0) continue;
 
 		// create an indexer with atoms which are present both in the path and in the user chosen atomIndexer
