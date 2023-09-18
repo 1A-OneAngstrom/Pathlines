@@ -245,7 +245,7 @@ void SEPathlineOfCenterOfMassVisualModel::unserialize(SBCSerializer* serializer,
 
 }
 
-void SEPathlineOfCenterOfMassVisualModel::eraseImplementation() {
+void SEPathlineOfCenterOfMassVisualModel::onErase() {
 
 	// SAMSON Element generator pro tip: modify this function when you need to perform special tasks when your visual model is erased (e.g. disconnect from nodes you are connected to).
 	// Important: this function must be undoable (i.e. only call undoable functions or add an undo command to the undo stack)
