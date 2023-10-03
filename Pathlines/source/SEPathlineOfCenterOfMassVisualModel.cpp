@@ -26,8 +26,8 @@ SEPathlineOfCenterOfMassVisualModel::SEPathlineOfCenterOfMassVisualModel(const S
 
 	SB_FOR(SBNode* node, nodeIndexer) {
 
-		node->getNodes(temporaryPathIndexer, SBNode::Path);							// get Path nodes from the nodeIndexer and add them to the temporaru indexer
-		node->getNodes(temporaryAtomIndexer, SBNode::Atom);							// get Atom nodes from the nodeIndexer and add them to the temporaru indexer
+		node->getNodes(temporaryPathIndexer, SBNode::Path);							// get Path nodes from the nodeIndexer and add them to the temporary indexer
+		node->getNodes(temporaryAtomIndexer, SBNode::Atom);							// get Atom nodes from the nodeIndexer and add them to the temporary indexer
 
 	}
 

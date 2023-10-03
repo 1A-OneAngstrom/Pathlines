@@ -2,6 +2,7 @@
 # CMake
 CMakeCache.txt
 CMakeLists.txt.user
+ElementVersionHash.cmake
 CMakeFiles
 CMakeScripts
 #Testing
@@ -9,6 +10,8 @@ cmake_install.cmake
 install_manifest.txt
 compile_commands.json
 CTestTestfile.cmake
+
+.DS_Store
 
 ################
 # folders

@@ -15,7 +15,7 @@ class SB_EXPORT SEPathlineOfCenterOfMassVisualModel : public SBMVisualModel {
 
 	SB_CLASS
 
-public :
+public:
 
 	/// \name Constructors and destructors
 	//@{
