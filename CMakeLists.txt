@@ -64,13 +64,13 @@ cmake_policy(SET CMP0020 NEW)
 IF( WIN32 )
 	IF( WINSDK_LIB_DIR )
 		FILE( TO_CMAKE_PATH ${WINSDK_LIB_DIR} CMAKE_WINSDK_LIB_DIR )
-	ELSE( QT5_CMAKE_INCLUDE_DIR )
+	ELSE( WINSDK_LIB_DIR )
 		IF( DEFINED ENV{WINSDK_LIB_DIR} )
 			FILE( TO_CMAKE_PATH $ENV{WINSDK_LIB_DIR} CMAKE_WINSDK_LIB_DIR )
 		ELSE( DEFINED ENV{WINSDK_LIB_DIR} )
 			MESSAGE( "WINSDK_LIB_DIR is not defined, it should be defined at cmake runtime or in environment variables" )		
 		ENDIF( DEFINED ENV{WINSDK_LIB_DIR} )
-	ENDIF( QT5_CMAKE_INCLUDE_DIR )
+	ENDIF( WINSDK_LIB_DIR )
 	SET ( CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} ${CMAKE_WINSDK_LIB_DIR} )
 ENDIF( WIN32 )
 
@@ -121,14 +121,12 @@ ENDIF(${USE_GIT})
 # This file just creates add definition of SB_ELEMENT_VERSION_HASH accessible throught the code.
 FILE ( WRITE ElementVersionHash.cmake "ADD_DEFINITIONS\(-DSB_ELEMENT_VERSION_HASH=\"${VERSION_HASH}\"\)\n" )
 
-MESSAGE( "CMAKE_SOURCE_DIR ${CMAKE_SOURCE_DIR}")
-MESSAGE( "CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}")
-
+MESSAGE( "     CMAKE_SOURCE_DIR           = ${CMAKE_SOURCE_DIR}")
+MESSAGE( "     CMAKE_MODULE_PATH          = ${CMAKE_MODULE_PATH}")
 
 INCLUDE ( ElementVersionHash )
 
 # End off VERSION_HASH information
-
 
 INCLUDE ( SDKConfiguration )
 
@@ -142,6 +140,8 @@ INCLUDE ( SBPublicDefinitions )
 INCLUDE ( SDKDeveloperDefinitions )
 INCLUDE ( SDKFunctions )
 INCLUDE ( SDKVersion )
+
+INCLUDE ( SBOpenGLVersion )
 
 MESSAGE( " " )
 MESSAGE( "=======================================  CMAKE SUMMARY PATHS  ========================================" )
@@ -158,42 +158,33 @@ FILE( TO_CMAKE_PATH ${CMAKE_SAMSON_DEVELOPPER_DATA_PATH}/Elements CMAKE_SAMSON_E
 FIND_PACKAGE ( SAMSONSDK REQUIRED )
 
 SET(CMAKE_AUTOMOC ON)
-FIND_PACKAGE(Qt6Core REQUIRED) 
-FIND_PACKAGE(Qt6Gui REQUIRED) 
-FIND_PACKAGE(Qt6LinguistTools REQUIRED) 
-FIND_PACKAGE(Qt6Multimedia REQUIRED) 
-FIND_PACKAGE(Qt6MultimediaWidgets REQUIRED)
-FIND_PACKAGE(Qt6Network REQUIRED)
-FIND_PACKAGE(Qt6OpenGL REQUIRED) 
-FIND_PACKAGE(Qt6PrintSupport REQUIRED)
-FIND_PACKAGE(Qt6Sql REQUIRED) 
-FIND_PACKAGE(Qt6Widgets REQUIRED)
-FIND_PACKAGE(Qt6Xml REQUIRED)
 
-INCLUDE_DIRECTORIES(${Qt6Core_INCLUDE_DIRS})  
-INCLUDE_DIRECTORIES(${Qt6Gui_INCLUDE_DIRS}) 
-INCLUDE_DIRECTORIES(${Qt6LinguistTools_INCLUDE_DIRS})
-INCLUDE_DIRECTORIES(${Qt6Multimedia_INCLUDE_DIRS})
-INCLUDE_DIRECTORIES(${Qt6MultimediaWidgets_INCLUDE_DIRS})
-INCLUDE_DIRECTORIES(${Qt6Network_INCLUDE_DIRS})
-INCLUDE_DIRECTORIES(${Qt6OpenGL_INCLUDE_DIRS}) 
-INCLUDE_DIRECTORIES(${Qt6PrintSupport_INCLUDE_DIRS})
-INCLUDE_DIRECTORIES(${Qt6Sql_INCLUDE_DIRS})
-INCLUDE_DIRECTORIES(${Qt6Widgets_INCLUDE_DIRS}) 
-INCLUDE_DIRECTORIES(${Qt6Xml_INCLUDE_DIRS}) 
-
-SET( QT_LIBRARIES	${Qt6Core_LIBRARIES}  
-					${Qt6Gui_LIBRARIES} 
-					${Qt6LinguistTools_LIBRARIES}
-					${Qt6Multimedia_LIBRARIES} 
-					${Qt6MultimediaWidgets_LIBRARIES} 
-					${Qt6Network_LIBRARIES} 
-					${Qt6OpenGL_LIBRARIES} 
-					${Qt6PrintSupport_LIBRARIES}
-					${Qt6Sql_LIBRARIES} 
-					${Qt6Widgets_LIBRARIES}
-					${Qt6Xml_LIBRARIES} 
+SET(QT_FRAMEWORKS
+	Core
+	Core5Compat
+	Gui
+	LinguistTools
+	Multimedia
+	MultimediaWidgets
+	Network
+	OpenGL
+	OpenGLWidgets
+	PrintSupport
+	Sql
+	Svg
+	WebChannel
+	WebEngineCore
+	WebEngineQuick
+	WebEngineWidgets
+	Widgets
+	Xml
 )
+
+foreach(FRAMEWORK ${QT_FRAMEWORKS})
+    FIND_PACKAGE(Qt6${FRAMEWORK} REQUIRED) 
+	INCLUDE_DIRECTORIES(${Qt6${FRAMEWORK}_INCLUDE_DIRS})
+	SET( QT_LIBRARIES ${QT_LIBRARIES} ${Qt6${FRAMEWORK}_LIBRARIES})
+endforeach()
 
 FIND_PACKAGE ( OpenGL )
 
@@ -209,7 +200,6 @@ if(QT_V EQUAL 6)
         set("${outfiles}" "${${outfiles}}" PARENT_SCOPE)
     endfunction()
     
-    
     function(qt5_wrap_cpp outfiles)
         message("OVERLOADED VERSION OF qt5_wrap_cpp")
         qt_wrap_cpp("${outfiles}" ${ARGN})
@@ -221,7 +211,6 @@ if(QT_V EQUAL 6)
         qt_add_resources("${outfiles}" ${ARGN})
         set("${outfiles}" "${${outfiles}}" PARENT_SCOPE)
     endfunction()
-    
     
     function(qt5_add_translation outfiles)
         message("OVERLOADED VERSION OF qt5_add_translation")
