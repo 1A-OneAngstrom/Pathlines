@@ -416,17 +416,8 @@ void SEPathlineOfCenterOfMassVisualModel::display(SBNode::RenderingPass renderin
 
 			// display opaque geometry
 
-			// enable Alpha blending in case of enabled transparency
-			//glEnable(GL_BLEND);
-			//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-			//glEnable(GL_DEPTH_TEST);
-
 			SAMSON::displayLineSweptSpheres(nCylinders, nPositionsForCylinders, indexDataForCylinders, positionDataForCylinders, radiusDataForCylinders,
-											colorDataForCylinders, flagDataForCylinders, false, true);
-
-			// disable Alpha blending
-			//glEnable(GL_DEPTH_TEST);
-			//glDisable(GL_BLEND);
+											colorDataForCylinders, flagDataForCylinders, false);
 
 		}
 		else if (renderingPass == SBNode::RenderingPass::ShadowingGeometry) {
@@ -434,7 +425,7 @@ void SEPathlineOfCenterOfMassVisualModel::display(SBNode::RenderingPass renderin
 			// display for shadows
 
 			SAMSON::displayLineSweptSpheres(nCylinders, nPositionsForCylinders, indexDataForCylinders, positionDataForCylinders, radiusDataForCylinders,
-											nullptr, nullptr, true, true);
+											nullptr, nullptr, true);
 
 		}
 		else if (renderingPass == SBNode::RenderingPass::SelectableGeometry) {
