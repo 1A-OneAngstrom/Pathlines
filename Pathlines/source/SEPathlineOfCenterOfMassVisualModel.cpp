@@ -425,7 +425,7 @@ void SEPathlineOfCenterOfMassVisualModel::display(SBNode::RenderingPass renderin
 			// display for shadows
 
 			SAMSON::displayLineSweptSpheres(nCylinders, nPositionsForCylinders, indexDataForCylinders, positionDataForCylinders, radiusDataForCylinders,
-											nullptr, nullptr, true);
+											colorDataForCylinders, flagDataForCylinders, true);
 
 		}
 		else if (renderingPass == SBNode::RenderingPass::SelectableGeometry) {
