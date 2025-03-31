@@ -13,8 +13,7 @@ FILE ( GLOB_RECURSE ${OUTPUT_UUID}_headers include/*.hpp )
 FILE ( GLOB_RECURSE ${OUTPUT_UUID}_sources source/*.cpp )
 FILE ( GLOB_RECURSE ${OUTPUT_UUID}_resources resource/*.qrc )
 FILE ( GLOB_RECURSE ${OUTPUT_UUID}_form form/*.ui )
-	
-FILE( GLOB_RECURSE ${OUTPUT_UUID}_ts resource/translations/*.ts )
+FILE ( GLOB_RECURSE ${OUTPUT_UUID}_ts resource/translations/*.ts )
 
 INCLUDE_DIRECTORIES ( include )
 INCLUDE_DIRECTORIES ( ${CMAKE_CURRENT_BINARY_DIR} )
