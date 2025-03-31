@@ -6,7 +6,7 @@
 SEPathlineOfCenterOfMassVisualModelProperties::SEPathlineOfCenterOfMassVisualModelProperties() {
 
 	visualModel = nullptr;
-	ui.setupUi( this );
+	ui.setupUi(this);
 	observer = new Observer(this);
 
 }
@@ -20,26 +20,26 @@ SEPathlineOfCenterOfMassVisualModelProperties::~SEPathlineOfCenterOfMassVisualMo
 
 }
 
-void SEPathlineOfCenterOfMassVisualModelProperties::loadSettings( SBGSettings *settings ) {
+void SEPathlineOfCenterOfMassVisualModelProperties::loadSettings(SBGSettings* settings) {
 
-	if ( settings == nullptr ) return;
-	
-	// SAMSON Element generator pro tip: complete this function so this property window can save its GUI state from one session to the next
-
-}
-
-void SEPathlineOfCenterOfMassVisualModelProperties::saveSettings( SBGSettings *settings ) {
-
-	if ( settings == nullptr ) return;
+	if (settings == nullptr) return;
 
 	// SAMSON Element generator pro tip: complete this function so this property window can save its GUI state from one session to the next
 
 }
 
-SBCContainerUUID SEPathlineOfCenterOfMassVisualModelProperties::getUUID() const { return SBCContainerUUID( "4C63CF61-22B9-F037-FC82-87B7F2A990B9" );}
+void SEPathlineOfCenterOfMassVisualModelProperties::saveSettings(SBGSettings* settings) {
 
-QPixmap SEPathlineOfCenterOfMassVisualModelProperties::getLogo() const { 
-	
+	if (settings == nullptr) return;
+
+	// SAMSON Element generator pro tip: complete this function so this property window can save its GUI state from one session to the next
+
+}
+
+SBCContainerUUID SEPathlineOfCenterOfMassVisualModelProperties::getUUID() const { return SBCContainerUUID("4C63CF61-22B9-F037-FC82-87B7F2A990B9"); }
+
+QPixmap SEPathlineOfCenterOfMassVisualModelProperties::getLogo() const {
+
 	// SAMSON Element generator pro tip: this icon will be visible in the GUI title bar. 
 	// Modify it to better reflect the purpose of your visual model.
 
@@ -47,12 +47,12 @@ QPixmap SEPathlineOfCenterOfMassVisualModelProperties::getLogo() const {
 
 }
 
-QString SEPathlineOfCenterOfMassVisualModelProperties::getName() const { 
+QString SEPathlineOfCenterOfMassVisualModelProperties::getName() const {
 
 	// SAMSON Element generator pro tip: this string will be the GUI title. 
 	// Modify this function to have a user-friendly description of your visual model inside SAMSON
 
-	return "SEPathlineOfCenterOfMassVisualModel properties"; 
+	return "SEPathlineOfCenterOfMassVisualModel properties";
 
 }
 
@@ -83,7 +83,7 @@ QString SEPathlineOfCenterOfMassVisualModelProperties::getCitation() const {
 bool SEPathlineOfCenterOfMassVisualModelProperties::setup() {
 
 	SBNodeIndexer nodeIndexer;
-	SB_FOR(SBNode* node, *SAMSON::getActiveDocument()->getSelectedNodes()) node->getNodes(nodeIndexer, SBNode::GetClass() == std::string("SEPathlineOfCenterOfMassVisualModel") && SBNode::GetElement() == std::string("SEPathlineOfCenterOfMass") && SBNode::GetElementUUID() == SBUUID(SB_ELEMENT_UUID));
+	SB_FOR(SBNode * node, *SAMSON::getActiveDocument()->getSelectedNodes()) node->getNodes(nodeIndexer, SBNode::GetClass() == std::string("SEPathlineOfCenterOfMassVisualModel") && SBNode::GetElement() == std::string("SEPathlineOfCenterOfMass") && SBNode::GetElementUUID() == SBUUID(SB_ELEMENT_UUID));
 
 	if (nodeIndexer.size() == 1) {
 
@@ -113,7 +113,7 @@ bool SEPathlineOfCenterOfMassVisualModelProperties::setup(SBNode* node) {
 
 }
 
-SEPathlineOfCenterOfMassVisualModelProperties::Observer::Observer(SEPathlineOfCenterOfMassVisualModelProperties* properties) { this->properties = properties; }
+SEPathlineOfCenterOfMassVisualModelProperties::Observer::Observer(SEPathlineOfCenterOfMassVisualModelProperties* properties) : properties(properties) {}
 SEPathlineOfCenterOfMassVisualModelProperties::Observer::~Observer() {}
 
 void SEPathlineOfCenterOfMassVisualModelProperties::Observer::onBaseEvent(SBBaseEvent* baseEvent) {
@@ -125,10 +125,10 @@ void SEPathlineOfCenterOfMassVisualModelProperties::Observer::onBaseEvent(SBBase
 void SEPathlineOfCenterOfMassVisualModelProperties::Observer::onVisualEvent(SBVisualEvent* visualEvent) {
 
 	if (visualEvent->getType() == SBVisualEvent::VisualModelChanged) {
-		
+
 		// SAMSON Element generator pro tip: modify this function if the property window
 		// needs to be updated when the VisualModelChanged event is sent
-				
+
 	}
 
 }

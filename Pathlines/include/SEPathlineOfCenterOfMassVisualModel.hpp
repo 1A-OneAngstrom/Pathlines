@@ -67,7 +67,7 @@ public:
 	//@{
 
 	const SBQuantity::length&									getRadius() const;
-	void														setRadius(const SBQuantity::length& r);
+	void														setRadius(const SBQuantity::length& value);
 
 	bool														hasRadiusRange() const;
 	const SBQuantity::length&									getDefaultRadius() const;
@@ -82,20 +82,20 @@ public:
 
 private:
 
-	SBPosition3													computePosition(const SBPath* path, const SBPointerIndexer<SBAtom>& atomIndexer, const unsigned int step);
+	static SBPosition3											computePosition(const SBPath* path, const SBPointerIndexer<SBAtom>& atomIndexer, const unsigned int step);
 
-	SBQuantity::length											radius				= SBQuantity::angstrom(0.3);						///< radius of the pathline
-	SBQuantity::length											defaultRadius		= SBQuantity::angstrom(0.3);						///< default value of the pathline's radius
-	SBQuantity::length											minimumRadius		= SBQuantity::angstrom(0.01);						///< minimum value of the pathline's radius
-	SBQuantity::length											maximumRadius		= SBQuantity::angstrom(0.8);						///< maximum value of the pathline's radius
-	SBQuantity::length											radiusSingleStep	= SBQuantity::angstrom(0.1);						///< single step fpr the pathline's radius
+	SBQuantity::length											radius				= SBQuantity::angstrom(0.3);						///< The radius of the pathline
+	SBQuantity::length											defaultRadius		= SBQuantity::angstrom(0.3);						///< The default value of the pathline's radius
+	SBQuantity::length											minimumRadius		= SBQuantity::angstrom(0.01);						///< The minimum value of the pathline's radius
+	SBQuantity::length											maximumRadius		= SBQuantity::angstrom(0.8);						///< The maximum value of the pathline's radius
+	SBQuantity::length											radiusSingleStep	= SBQuantity::angstrom(0.1);						///< The single step fpr the pathline's radius
 
-	float														colorRed	= 1.0f;														///< red channel of the pathline color
-	float														colorGreen	= 0.0f;														///< green channel of the pathline color
-	float														colorBlue	= 0.0f;														///< blue channel of the pathline color
+	float														colorRed{ 1.0f };														///< The red channel of the pathline color
+	float														colorGreen{ 0.0f };														///< The green channel of the pathline color
+	float														colorBlue{ 0.0f };														///< The blue channel of the pathline color
 
-	SBPointerIndexer<SBAtom>									atomIndexer;															///< indexer of pointers to atoms for which pathlines should be created
-	SBPointerIndexer<SBPath>									pathIndexer;															///< indexer of pointers to paths for which pathlines should be created
+	SBPointerIndexer<SBAtom>									atomIndexer;															///< The indexer of pointers to atoms for which pathlines should be created
+	SBPointerIndexer<SBPath>									pathIndexer;															///< The indexer of pointers to paths for which pathlines should be created
 
 };
 

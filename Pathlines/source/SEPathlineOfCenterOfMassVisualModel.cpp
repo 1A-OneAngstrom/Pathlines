@@ -252,15 +252,24 @@ void SEPathlineOfCenterOfMassVisualModel::onErase() {
 
 }
 
+SB_HOLD_SET_IMPLEMENTATION(SEPathlineOfCenterOfMassVisualModel, SBQuantity::length, Radius, "radius");
+
 const SBDQuantity::length&	SEPathlineOfCenterOfMassVisualModel::getRadius() const { return radius; }
-void						SEPathlineOfCenterOfMassVisualModel::setRadius(const SBQuantity::length& radius) {
+void						SEPathlineOfCenterOfMassVisualModel::setRadius(const SBQuantity::length& value) {
 
-	if (this->radius != radius) {
+	SBQuantity::length newValue = value;
+	if (hasRadiusRange()) {
 
-		if      (hasRadiusRange() && radius < getMinimumRadius()) this->radius = getMinimumRadius();
-		else if (hasRadiusRange() && radius > getMaximumRadius()) this->radius = getMaximumRadius();
-		else this->radius = radius;
+		if (newValue < getMinimumRadius()) newValue = getMinimumRadius();
+		else if (newValue > getMaximumRadius()) newValue = getMaximumRadius();
 
+	}
+
+	if (this->radius != newValue) {
+
+		SB_HOLD_SET(SEPathlineOfCenterOfMassVisualModel, Radius, getRadius(), newValue, this);
+
+		this->radius = newValue;
 		update();
 
 	}
