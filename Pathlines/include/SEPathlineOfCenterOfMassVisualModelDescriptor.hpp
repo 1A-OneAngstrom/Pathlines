@@ -18,7 +18,7 @@ SB_CLASS_BEGIN(SEPathlineOfCenterOfMassVisualModel);
 		"The Pathline model allows you to visualize the movement of the center of mass of a system along a Path (trajectory).<br><br>"
 		"The Pathline model is created based on the current selection, or from the whole document if nothing is selected.<br/><br/>"
 		"A visual model is saved as a node in the document.");
-	SB_CLASS_VERSION_NUMBER("1.0.0");
+	SB_CLASS_VERSION_NUMBER("1.1.0");
 
 	SB_FACTORY_BEGIN;
 
@@ -28,9 +28,14 @@ SB_CLASS_BEGIN(SEPathlineOfCenterOfMassVisualModel);
 	SB_FACTORY_END;
 
 	SB_INTERFACE_BEGIN;
-
+	
 		SB_ATTRIBUTE_READ_WRITE_RESET_RANGE(const SBQuantity::length&, SEPathlineOfCenterOfMassVisualModel, Radius, "Radius", "Geometry");
+		
 		SB_ATTRIBUTE_READ_ONLY(SBDDataGraphNodeMaterial*, SEPathlineOfCenterOfMassVisualModel, Material, "Material", "Display");
+		SB_ATTRIBUTE_READ_WRITE_RESET_RANGE_SLIDER(unsigned int, SEPathlineOfCenterOfMassVisualModel, Transparency, "Transparency", "Display");
+
+		SB_ATTRIBUTE_PUSH_BUTTON(SEPathlineOfCenterOfMassVisualModel, "Select atoms", "Atoms", "Node", selectAtoms);
+		SB_ATTRIBUTE_PUSH_BUTTON(SEPathlineOfCenterOfMassVisualModel, "Select paths", "Paths", "Node", selectPaths);
 
 	SB_INTERFACE_END;
 

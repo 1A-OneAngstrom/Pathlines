@@ -7,6 +7,9 @@
 #include "SBStructuralEvent.hpp"
 #include "SBAtom.hpp"
 #include "SBPath.hpp"
+#include "SBCylinderArray.hpp"
+
+#include "SBGRenderOpenGLFunctions.hpp"
 
 
 /// This class implements a visual model
@@ -80,19 +83,70 @@ public:
 
 	void														update();
 
+	/// \name Selections
+	//@{
+
+	void														selectAtoms();															///< Selects atoms
+	void														selectPaths();															///< Selects paths
+
+	virtual void												getNodes(SBNodeIndexer& nodeIndexer, SBNode::Type nodeType, bool selectedNodesOnly = false, const SBNodePredicate& visitPredicate = SBDDataGraphNode::All(), bool includeDependencies = false) const final;					///< Collects nodes into \p nodeIndexer, based on a \p nodeType, a selection status and a \p visitPredicate, with or without dependencies
+	virtual void												getNodes(SBNodeIndexer& nodeIndexer, const SBNodePredicate& selectionPredicate = SBDDataGraphNode::All(), const SBNodePredicate& visitPredicate = SBDDataGraphNode::All(), bool includeDependencies = false) const final;	///< Collects nodes into \p nodeIndexer, based on a \p selectionPredicate and a \p visitPredicate, with or without dependencies
+
+	virtual bool												hasNode(SBNode::Type nodeType, bool selectedNodesOnly = false, const SBNodePredicate& visitPredicate = SBDDataGraphNode::All(), bool includeDependencies = false) const final;					///< Checks for nodes based on a \p nodeType, a selection status and a \p visitPredicate, with or without dependencies
+	virtual bool												hasNode(const SBNodePredicate& selectionPredicate = SBDDataGraphNode::All(), const SBNodePredicate& visitPredicate = SBDDataGraphNode::All(), bool includeDependencies = false) const final;	///< Checks for nodes based on a \p selectionPredicate and a \p visitPredicate, with or without dependencies
+
+	//@}
+
 private:
+	
+	static SB_OPENGL_FUNCTIONS*									gl;
+
+	/// \name Positions data
+	//@{
+
+	std::vector< std::pair<SBPointer<SBPath>, std::vector<SBPosition3> > > vectorOfPathsWithPositions;									///< A vector of pairs of paths with a vector of positions along the path
+
+	void														computePositionsAlongPaths();
 
 	static SBPosition3											computePosition(const SBPath* path, const SBPointerIndexer<SBAtom>& atomIndexer, const unsigned int step);
+
+	//@}
+
+	/// \name Visual model properties
+	//@{
 
 	SBQuantity::length											radius				= SBQuantity::angstrom(0.3);						///< The radius of the pathline
 	SBQuantity::length											defaultRadius		= SBQuantity::angstrom(0.3);						///< The default value of the pathline's radius
 	SBQuantity::length											minimumRadius		= SBQuantity::angstrom(0.01);						///< The minimum value of the pathline's radius
-	SBQuantity::length											maximumRadius		= SBQuantity::angstrom(0.8);						///< The maximum value of the pathline's radius
-	SBQuantity::length											radiusSingleStep	= SBQuantity::angstrom(0.1);						///< The single step fpr the pathline's radius
+	SBQuantity::length											maximumRadius		= SBQuantity::angstrom(1.0);						///< The maximum value of the pathline's radius
+	SBQuantity::length											radiusSingleStep	= SBQuantity::angstrom(0.1);						///< The single step for the pathline's radius
 
-	float														colorRed{ 1.0f };														///< The red channel of the pathline color
-	float														colorGreen{ 0.0f };														///< The green channel of the pathline color
-	float														colorBlue{ 0.0f };														///< The blue channel of the pathline color
+	//@}
+
+	/// \name Display data
+	//@{
+
+	SBPointer<SBCylinderArray>									cylinderArray{ nullptr };												///< Geometry array for path-tracing
+
+	unsigned int												numberOfCylinders{ 0 };													///< The total number of cylinders
+	unsigned int												numberOfPositionsForCylinders{ 0 };										///< The total number of positions for cylinders (2 per cylinder)
+	
+	unsigned int*												indexData{ nullptr };													///< this should be of size 2 * cylinder, it will say for each end point at which position it should be
+	float*														positionData{ nullptr };												///< (X,Y,Z) coordinates of each position, 2 positions per cylinder
+	float*														radiusData{ nullptr };													///< the radius of the two end points of the cylinder (can be different to make a cone)
+	float*														colorData{ nullptr };													///< the RGBA code for each end point of a cylinder
+	unsigned int*												flagData{ nullptr };													///< flags
+	unsigned int*												nodeIndexData{ nullptr };												///< controls if the cylinder is highlighted, selected
+	unsigned int*												capData{ nullptr };														///< whether the end of a cylinder is capped (1) or not (0)
+	SBNodeMaterial**											materialData{ nullptr };												///< the material (for path-tracing)
+	SBNode**													nodeData{ nullptr };													///< the associated node (for path-tracing)
+
+	float														color[4]{ 1.0f, 0.0f, 0.0f, 1.0f };										///< The pathline color
+
+	void														populateRadiusData();
+	void														populateColorData();
+
+	//@}
 
 	SBPointerIndexer<SBAtom>									atomIndexer;															///< The indexer of pointers to atoms for which pathlines should be created
 	SBPointerIndexer<SBPath>									pathIndexer;															///< The indexer of pointers to paths for which pathlines should be created

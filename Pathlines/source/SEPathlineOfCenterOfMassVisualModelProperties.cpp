@@ -6,7 +6,9 @@
 SEPathlineOfCenterOfMassVisualModelProperties::SEPathlineOfCenterOfMassVisualModelProperties() {
 
 	visualModel = nullptr;
+
 	ui.setupUi(this);
+
 	observer = new Observer(this);
 
 }
@@ -83,7 +85,11 @@ QString SEPathlineOfCenterOfMassVisualModelProperties::getCitation() const {
 bool SEPathlineOfCenterOfMassVisualModelProperties::setup() {
 
 	SBNodeIndexer nodeIndexer;
-	SB_FOR(SBNode * node, *SAMSON::getActiveDocument()->getSelectedNodes()) node->getNodes(nodeIndexer, SBNode::GetClass() == std::string("SEPathlineOfCenterOfMassVisualModel") && SBNode::GetElement() == std::string("SEPathlineOfCenterOfMass") && SBNode::GetElementUUID() == SBUUID(SB_ELEMENT_UUID));
+	SB_FOR(SBNode * node, *SAMSON::getActiveDocument()->getSelectedNodes()) {
+
+		node->getNodes(nodeIndexer, SBNode::GetClass() == std::string("SEPathlineOfCenterOfMassVisualModel") && SBNode::GetElement() == std::string("SEPathlineOfCenterOfMass") && SBNode::GetElementUUID() == SBUUID(SB_ELEMENT_UUID));
+
+	}
 
 	if (nodeIndexer.size() == 1) {
 

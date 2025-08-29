@@ -4,22 +4,31 @@
 #include "SBDColorSchemeConstant.hpp"
 #include "SBDDataGraphNodeMaterial.hpp"
 
-//#include <QOpenGLShaderProgram>
+#include <QOpenGLShaderProgram>
+
+SB_OPENGL_FUNCTIONS* SEPathlineOfCenterOfMassVisualModel::gl = nullptr;
 
 SEPathlineOfCenterOfMassVisualModel::SEPathlineOfCenterOfMassVisualModel() {
 
 	// SAMSON Element generator pro tip: this default constructor is called when unserializing the node, so it should perform all default initializations.
 
+	if (!gl) gl = SAMSON::getOpenGLFunctions();
+
+	cylinderArray = new SBCylinderArray(numberOfCylinders, numberOfPositionsForCylinders, indexData, positionData, radiusData, capData, colorData, materialData, nodeData, flagData, nodeIndexData, nullptr);
+	getGeometryArrayIndexer().addReferenceTarget(cylinderArray());
+
+	connectBaseSignalToSlot(this, SB_SLOT(&SEPathlineOfCenterOfMassVisualModel::onBaseEvent));
+
 }
 
-SEPathlineOfCenterOfMassVisualModel::SEPathlineOfCenterOfMassVisualModel(const SBNodeIndexer& nodeIndexer) {
+SEPathlineOfCenterOfMassVisualModel::SEPathlineOfCenterOfMassVisualModel(const SBNodeIndexer& nodeIndexer) : SEPathlineOfCenterOfMassVisualModel() {
 
 	// SAMSON Element generator pro tip: implement this function if you want your visual model to be applied to a set of data graph nodes.
 	// You might want to connect to various signals and handle the corresponding events. For example, if your visual model represents a sphere positioned at
 	// the center of mass of a group of atoms, you might want to connect to the atoms' base signals (e.g. to update the center of mass when an atom is erased) and
 	// the atoms' structural signals (e.g. to update the center of mass when an atom is moved).
 
-	// nodeIndexer may contain both atoms and paths
+	// the input nodeIndexer may contain both atoms and paths
 
 	SBNodeIndexer temporaryPathIndexer;
 	SBNodeIndexer temporaryAtomIndexer;
@@ -31,22 +40,17 @@ SEPathlineOfCenterOfMassVisualModel::SEPathlineOfCenterOfMassVisualModel(const S
 
 	}
 
-	if (temporaryPathIndexer.size() == 0)											// if no Paths selected
-		SAMSON::getActiveDocument()->getNodes(temporaryPathIndexer, SBNode::Path);	// get all Paths from the active Document
+	if (temporaryPathIndexer.size() == 0)											// if no paths selected
+		SAMSON::getActiveDocument()->getNodes(temporaryPathIndexer, SBNode::Path);	// get all paths from the active document
 
-	if (temporaryAtomIndexer.size() == 0)											// if no Atoms selected
-		SAMSON::getActiveDocument()->getNodes(temporaryAtomIndexer, SBNode::Atom);	// get all Atoms from the active Document
+	if (temporaryAtomIndexer.size() == 0)											// if no atoms selected
+		SAMSON::getActiveDocument()->getNodes(temporaryAtomIndexer, SBNode::Atom);	// get all atoms from the active document
 
 	SB_FOR(SBNode* node, temporaryPathIndexer)
-		pathIndexer.addReferenceTarget(node);										// add to the internal indexer references to the chosen Paths
+		pathIndexer.addReferenceTarget(node);										// add to the internal indexer references to the chosen paths
 
 	SB_FOR(SBNode* node, temporaryAtomIndexer)
-		atomIndexer.addReferenceTarget(node);
-
-	temporaryPathIndexer.clear();
-	temporaryAtomIndexer.clear();
-
-	connectBaseSignalToSlot(this, SB_SLOT(&SEPathlineOfCenterOfMassVisualModel::onBaseEvent));
+		atomIndexer.addReferenceTarget(node);										// add to the internal indexer references to the chosen atoms
 
 	QString pathsStr(" path");
 	if (pathIndexer.size() != 1) pathsStr += "s";
@@ -59,6 +63,8 @@ SEPathlineOfCenterOfMassVisualModel::~SEPathlineOfCenterOfMassVisualModel() {
 	// SAMSON Element generator pro tip: disconnect from signals you might have connected to.
 
 	disconnectBaseSignalFromSlot(this, SB_SLOT(&SEPathlineOfCenterOfMassVisualModel::onBaseEvent));
+
+	// Note: data arrays are deleted via the geometry array (cylinderArray)
 
 }
 
@@ -90,9 +96,9 @@ void SEPathlineOfCenterOfMassVisualModel::serialize(SBCSerializer* serializer, c
 
 	if (sdkVersionNumber < SBVersionNumber(0, 8, 0)) {
 
-		serializer->writeUnsignedCharElement("colorRed",   static_cast<unsigned char>(255 * colorRed));
-		serializer->writeUnsignedCharElement("colorGreen", static_cast<unsigned char>(255 * colorGreen));
-		serializer->writeUnsignedCharElement("colorBlue",  static_cast<unsigned char>(255 * colorBlue));
+		serializer->writeUnsignedCharElement("colorRed",   static_cast<unsigned char>(255 * color[0]));
+		serializer->writeUnsignedCharElement("colorGreen", static_cast<unsigned char>(255 * color[1]));
+		serializer->writeUnsignedCharElement("colorBlue",  static_cast<unsigned char>(255 * color[2]));
 
 	}
 
@@ -176,9 +182,9 @@ void SEPathlineOfCenterOfMassVisualModel::unserialize(SBCSerializer* serializer,
 
 	if (sdkVersionNumber < SBVersionNumber(0, 8, 0)) {
 
-		colorRed   = static_cast<float>(serializer->readUnsignedCharElement()) / 255.0f;
-		colorGreen = static_cast<float>(serializer->readUnsignedCharElement()) / 255.0f;
-		colorBlue  = static_cast<float>(serializer->readUnsignedCharElement()) / 255.0f;
+		color[0] = static_cast<float>(serializer->readUnsignedCharElement()) / 255.0f;
+		color[1] = static_cast<float>(serializer->readUnsignedCharElement()) / 255.0f;
+		color[2] = static_cast<float>(serializer->readUnsignedCharElement()) / 255.0f;
 
 	}
 
@@ -188,7 +194,7 @@ void SEPathlineOfCenterOfMassVisualModel::unserialize(SBCSerializer* serializer,
 	unsigned int nodeIndex = 0; // the index of the node in the indexer
 
 	// Read the number of atoms to which this visual model is applied
-	unsigned int numberOfAtoms = serializer->readUnsignedIntElement();
+	const unsigned int numberOfAtoms = serializer->readUnsignedIntElement();
 
 	// Read indices of the atoms to which this visual model is applied and
 	// add these node into the atom indexer of the visual model
@@ -217,7 +223,7 @@ void SEPathlineOfCenterOfMassVisualModel::unserialize(SBCSerializer* serializer,
 	// Unserialize referenced paths
 
 	// Read the number of paths to which this visual model is applied
-	unsigned int numberOfPaths = serializer->readUnsignedIntElement();
+	const unsigned int numberOfPaths = serializer->readUnsignedIntElement();
 
 	// Read indices of the paths to which this visual model is applied and
 	// add these node into the path indexer of the visual model
@@ -270,6 +276,7 @@ void						SEPathlineOfCenterOfMassVisualModel::setRadius(const SBQuantity::lengt
 		SB_HOLD_SET(SEPathlineOfCenterOfMassVisualModel, Radius, getRadius(), newValue, this);
 
 		this->radius = newValue;
+		populateRadiusData();
 		update();
 
 	}
@@ -293,12 +300,109 @@ void SEPathlineOfCenterOfMassVisualModel::update() {
 
 }
 
+void SEPathlineOfCenterOfMassVisualModel::selectAtoms() {
+
+	if (atomIndexer.size()) {
+
+		SAMSON::beginHolding("Select atoms");
+
+		SAMSON::getActiveDocument()->clearSelection();
+
+		SB_FOR(SBNode * atom, atomIndexer) atom->setSelectionFlag(true);
+
+		SAMSON::endHolding();
+
+	}
+
+}
+
+void SEPathlineOfCenterOfMassVisualModel::selectPaths() {
+
+	if (pathIndexer.size()) {
+
+		SAMSON::beginHolding("Select paths");
+
+		SAMSON::getActiveDocument()->clearSelection();
+
+		SB_FOR(SBNode * path, pathIndexer) path->setSelectionFlag(true);
+
+		SAMSON::endHolding();
+
+	}
+
+}
+
+void SEPathlineOfCenterOfMassVisualModel::getNodes(SBNodeIndexer& nodeIndexer, SBNode::Type nodeType, bool selectedNodesOnly, const SBNodePredicate& visitPredicate, bool includeDependencies) const {
+
+	if (!visitPredicate(this)) return;
+
+	if ((getType() == nodeType) && (!selectedNodesOnly || isSelected())) nodeIndexer.push_back(const_cast<SEPathlineOfCenterOfMassVisualModel*>(this));
+
+	if (includeDependencies) {
+
+		SB_FOR(SBNode * node, atomIndexer) node->getNodes(nodeIndexer, nodeType, selectedNodesOnly, visitPredicate, includeDependencies);
+		SB_FOR(SBNode * node, pathIndexer) node->getNodes(nodeIndexer, nodeType, selectedNodesOnly, visitPredicate, includeDependencies);
+
+	}
+
+}
+
+void SEPathlineOfCenterOfMassVisualModel::getNodes(SBNodeIndexer& nodeIndexer, const SBNodePredicate& selectionPredicate, const SBNodePredicate& visitPredicate, bool includeDependencies) const {
+
+	if (!visitPredicate(this)) return;
+
+	if (selectionPredicate(this)) nodeIndexer.push_back(const_cast<SEPathlineOfCenterOfMassVisualModel*>(this));
+
+	if (includeDependencies) {
+
+		SB_FOR(SBNode * node, atomIndexer) node->getNodes(nodeIndexer, selectionPredicate, visitPredicate, includeDependencies);
+		SB_FOR(SBNode * node, pathIndexer) node->getNodes(nodeIndexer, selectionPredicate, visitPredicate, includeDependencies);
+
+	}
+
+}
+
+bool SEPathlineOfCenterOfMassVisualModel::hasNode(SBNode::Type nodeType, bool selectedNodesOnly, const SBNodePredicate& visitPredicate, bool includeDependencies) const {
+
+	if (!visitPredicate(this)) return false;
+
+	if ((getType() == nodeType) && (!selectedNodesOnly || isSelected())) return true;
+
+	if (includeDependencies) {
+
+		SB_FOR(SBNode * node, atomIndexer) if (node->hasNode(nodeType, selectedNodesOnly, visitPredicate, includeDependencies)) return true;
+		SB_FOR(SBNode * node, pathIndexer) if (node->hasNode(nodeType, selectedNodesOnly, visitPredicate, includeDependencies)) return true;
+
+	}
+
+	return false;
+
+}
+
+bool SEPathlineOfCenterOfMassVisualModel::hasNode(const SBNodePredicate& selectionPredicate, const SBNodePredicate& visitPredicate, bool includeDependencies) const {
+
+	if (!visitPredicate(this)) return false;
+
+	if (selectionPredicate(this)) return true;
+
+	if (includeDependencies) {
+
+		SB_FOR(SBNode * node, atomIndexer) if (node->hasNode(selectionPredicate, visitPredicate, includeDependencies)) return true;
+		SB_FOR(SBNode * node, pathIndexer) if (node->hasNode(selectionPredicate, visitPredicate, includeDependencies)) return true;
+
+	}
+
+	return false;
+
+}
+
 void SEPathlineOfCenterOfMassVisualModel::display(SBNode::RenderingPass renderingPass) {
 
 	// SAMSON Element generator pro tip: this function is called by SAMSON during the main rendering loop. This is the main function of your visual model. 
 	// Implement this function to display things in SAMSON, for example thanks to the utility functions provided by SAMSON (e.g. displaySpheres, displayTriangles, etc.)
 
 	if (renderingPass != SBNode::RenderingPass::OpaqueGeometry &&
+		renderingPass != SBNode::RenderingPass::TransparentGeometry &&
 		renderingPass != SBNode::RenderingPass::ShadowingGeometry &&
 		renderingPass != SBNode::RenderingPass::SelectableGeometry)
 		return;
@@ -306,26 +410,251 @@ void SEPathlineOfCenterOfMassVisualModel::display(SBNode::RenderingPass renderin
 	if (pathIndexer.size() == 0) return;
 	if (atomIndexer.size() == 0) return;
 
-	const unsigned int nodeIndex = getNodeIndex();
+	// compute positions along paths, if necessary
 
-	// get color from the material if it is applied
+	if (vectorOfPathsWithPositions.size() == 0)
+		computePositionsAlongPaths();
 
-	if (getMaterial()) {
+	unsigned int newNumberOfCylinders = 0;
+	for (const auto& it : std::as_const(vectorOfPathsWithPositions)) {
 
-		if (getMaterial()->getColorScheme()) {
+		SBPath* path = it.first();
+		newNumberOfCylinders += path->getNumberOfSteps() - 1;	// the number of cylinders between steps
 
-			float color[4];
-			getMaterial()->getColorScheme()->getColor(color);
-			colorRed   = color[0];
-			colorGreen = color[1];
-			colorBlue  = color[2];
+	}
+
+	if (numberOfCylinders != newNumberOfCylinders) {
+
+		numberOfCylinders = newNumberOfCylinders;
+		numberOfPositionsForCylinders = 2 * newNumberOfCylinders;
+
+		// re-allocate data arrays
+
+		delete[] indexData;
+		delete[] positionData;
+		delete[] radiusData;
+		delete[] colorData;
+		delete[] flagData;
+		delete[] nodeIndexData;
+		delete[] capData;
+		delete[] materialData;
+		delete[] nodeData;
+
+		indexData = new unsigned int[numberOfPositionsForCylinders]();
+		positionData = new float[3 * numberOfPositionsForCylinders]();
+		radiusData = new float[numberOfPositionsForCylinders]();
+		colorData = new float[4 * numberOfPositionsForCylinders]();
+		flagData = new unsigned int[numberOfPositionsForCylinders]();
+		nodeIndexData = new unsigned int[numberOfPositionsForCylinders]();
+		capData = new unsigned int[numberOfPositionsForCylinders]();
+		materialData = new SBNodeMaterial*[numberOfPositionsForCylinders];
+		nodeData = new SBNode*[numberOfPositionsForCylinders];
+
+		if (cylinderArray.isValid()) {
+
+			cylinderArray->setNumberOfGeometries(numberOfCylinders);
+			cylinderArray->setNumberOfPositions(numberOfPositionsForCylinders);
+			cylinderArray->setPositionData(positionData);
+			cylinderArray->setIndexData(indexData);
+			cylinderArray->setColorData(colorData);
+			cylinderArray->setMaterialData(materialData);
+			cylinderArray->setNodeData(nodeData);
+			cylinderArray->setRadiusData(radiusData);
+			cylinderArray->setCapData(capData);
+			cylinderArray->setFlagData(flagData);
+			cylinderArray->setNodeIndexData(nodeIndexData);
+
+		}
+
+		// populate data arrays
+
+		std::iota(indexData, indexData + numberOfPositionsForCylinders, 0);
+		std::fill_n(capData, numberOfPositionsForCylinders, 0);							// 1 - close the caps; 0 - don't close the caps
+		
+		populateRadiusData();
+		populateColorData();
+
+		unsigned int shift = 0;
+
+		for (const auto& it : std::as_const(vectorOfPathsWithPositions)) {
+
+			SBPath* path = it.first();
+			const std::vector<SBPosition3>& positions = it.second;
+			if (!path || positions.size() == 0) continue;
+
+			const unsigned int numberOfSteps = path->getNumberOfSteps();
+
+			std::fill_n(nodeData + 2 * shift, 2 * (numberOfSteps - 1), path);
+
+			for (unsigned int step = 0; step < numberOfSteps - 1; step++) {
+
+				const unsigned int i6 = 6 * (step + shift);
+
+				positionData[i6 + 0] = static_cast<float>(positions[step].v[0].getValue());
+				positionData[i6 + 1] = static_cast<float>(positions[step].v[1].getValue());
+				positionData[i6 + 2] = static_cast<float>(positions[step].v[2].getValue());
+				positionData[i6 + 3] = static_cast<float>(positions[step + 1].v[0].getValue());
+				positionData[i6 + 4] = static_cast<float>(positions[step + 1].v[1].getValue());
+				positionData[i6 + 5] = static_cast<float>(positions[step + 1].v[2].getValue());
+
+			}
+
+			shift += numberOfSteps - 1;
 
 		}
 
 	}
 
-	SB_FOR(SBPath* path, pathIndexer) {
+	// populate data arrays
 
+	unsigned int shift = 0;
+
+	for (const auto& it : std::as_const(vectorOfPathsWithPositions)) {
+
+		SBPath* path = it.first();
+		const std::vector<SBPosition3>& positions = it.second;
+		if (!path || positions.size() == 0) continue;
+
+		const unsigned int numberOfSteps = path->getNumberOfSteps();
+
+		std::fill_n(flagData + 2 * shift, 2 * (numberOfSteps - 1), path->getInheritedFlags() | getInheritedFlags());
+		std::fill_n(nodeIndexData + 2 * shift, 2 * (numberOfSteps - 1), path->getNodeIndex());
+
+		shift += numberOfSteps - 1;
+
+	}
+
+	const float inheritedOpacity = getInheritedOpacity();
+
+	if ((renderingPass == SBNode::RenderingPass::OpaqueGeometry) && (inheritedOpacity == 1.0f)) {
+
+		// display opaque geometry
+
+		SAMSON::displayLineSweptSpheres(numberOfCylinders, numberOfPositionsForCylinders, indexData, positionData, radiusData,
+			colorData, flagData, false);
+
+	}
+	else if ((renderingPass == SBNode::RenderingPass::TransparentGeometry) && (inheritedOpacity != 1.0f)) {
+
+		// display transparent geometry
+
+		if (gl) {
+
+			gl->glColorMask(false, false, false, false);
+
+			SAMSON::displayLineSweptSpheres(numberOfCylinders, numberOfPositionsForCylinders, indexData, positionData, radiusData,
+				colorData, flagData, false, SBSpatialTransform::identity, inheritedOpacity);
+
+			gl->glColorMask(true, true, true, true);
+
+			SAMSON::displayLineSweptSpheres(numberOfCylinders, numberOfPositionsForCylinders, indexData, positionData, radiusData,
+				colorData, flagData, false, SBSpatialTransform::identity, inheritedOpacity);
+
+		}
+
+	}
+	else if (renderingPass == SBNode::RenderingPass::ShadowingGeometry) {
+
+		// display for shadows
+
+		SAMSON::displayLineSweptSpheres(numberOfCylinders, numberOfPositionsForCylinders, indexData, positionData, radiusData,
+			colorData, flagData, true);
+
+	}
+	else if (renderingPass == SBNode::RenderingPass::SelectableGeometry) {
+
+		// display for selection
+
+		SAMSON::displayLineSweptSpheresSelection(numberOfCylinders, numberOfPositionsForCylinders, indexData, positionData, radiusData, nodeIndexData);
+
+	}
+
+}
+
+void SEPathlineOfCenterOfMassVisualModel::populateRadiusData() {
+
+	if (radiusData)
+		std::fill_n(radiusData, numberOfPositionsForCylinders, static_cast<float>(radius.getValue()));
+
+}
+
+void SEPathlineOfCenterOfMassVisualModel::populateColorData() {
+
+	// set to the default color
+
+	color[0] = 1.0f;
+	color[1] = 0.0f;
+	color[2] = 0.0f;
+	color[3] = 1.0f;
+
+	// get color from the material if it is applied
+
+	SBNodeMaterial* material = getMaterial();
+	SBNodeColorScheme* colorScheme = nullptr;
+
+	if (material && material->getColorScheme()) {
+
+		colorScheme = material->getColorScheme();
+		colorScheme->getColor(color);
+		color[3] = 1.0f;	// set the alpha channel to 1.0
+
+	}
+
+	// populate data arrays
+
+	if (materialData)
+		std::fill_n(materialData, numberOfPositionsForCylinders, material);
+
+	if (!colorData) return;
+
+	unsigned int shift = 0;
+	unsigned int counter = 0;
+
+	for (const auto& it : std::as_const(vectorOfPathsWithPositions)) {
+
+		SBPath* path = it.first();
+		const std::vector<SBPosition3>& positions = it.second;
+		if (!path || positions.size() == 0) continue;
+
+		// if a color scheme with a color palette has been applied to the visual model, then colorize each path in a different color along the palette
+		if (colorScheme && colorScheme->hasPalette()) {
+
+			colorScheme->getPalette()->getColor(color, static_cast<float>(counter + 0.5f) / vectorOfPathsWithPositions.size());
+			color[3] = 1.0f;	// set the alpha channel to 1.0
+
+		}
+
+		const unsigned int numberOfSteps = path->getNumberOfSteps();
+
+		for (unsigned int step = 0; step < numberOfSteps - 1; step++) {
+
+			const unsigned int i8 = 8 * (step + shift);
+
+			colorData[i8 + 0] = color[0];
+			colorData[i8 + 1] = color[1];
+			colorData[i8 + 2] = color[2];
+			colorData[i8 + 3] = color[3];
+			colorData[i8 + 4] = color[0];
+			colorData[i8 + 5] = color[1];
+			colorData[i8 + 6] = color[2];
+			colorData[i8 + 7] = color[3];
+
+		}
+
+		shift += numberOfSteps - 1;
+		++counter;
+
+	}
+
+}
+
+void SEPathlineOfCenterOfMassVisualModel::computePositionsAlongPaths() {
+
+	vectorOfPathsWithPositions.clear();
+
+	SB_FOR(SBPath * path, pathIndexer) {
+
+		if (!path) continue;
 		if (path->isErased()) continue;
 
 		const unsigned int numberOfSteps = path->getNumberOfSteps();
@@ -334,127 +663,28 @@ void SEPathlineOfCenterOfMassVisualModel::display(SBNode::RenderingPass renderin
 		const SBPointerIndexer<SBAtom>* pathAtomIndexer = path->getAtomIndexer();
 		if (pathAtomIndexer->size() == 0) continue;
 
-		// create an indexer with atoms which are present both in the path and in the user chosen atomIndexer
+		// create an indexer with atoms which are present both in the path and in the user-chosen atomIndexer
 
 		SBPointerIndexer<SBAtom> temporaryAtomIndexer;
-		SB_FOR(SBAtom* node, atomIndexer) {
+		SB_FOR(SBAtom * node, atomIndexer) {
 
 			if (node->isErased()) continue;
 			if (pathAtomIndexer->hasIndex(node))
 				temporaryAtomIndexer.addReferenceTarget(node);
 
 		}
-		const unsigned int numberOfAtoms = temporaryAtomIndexer.size();
-		if (numberOfAtoms == 0) continue;
+		if (temporaryAtomIndexer.size() == 0) continue;
 
-		// cylinders
+		// compute a vector of positions along the path
 
-		const unsigned int nCylinders = numberOfSteps - 1;
-		const unsigned int nPositionsForCylinders = 2 * nCylinders;					// the two end points
-		unsigned int* indexDataForCylinders = new unsigned int[2 * nCylinders];		// this should be of size 2 * cylinder, it will say for each end point at which position it should be
-		float *positionDataForCylinders = new float[3 * nPositionsForCylinders];	// all the coordinates X Y Z of each positions,
-		float *radiusDataForCylinders = new float[2 * nCylinders];					// the radius of the two end points of the cylinder (can be different to make a cone)
-		float *colorDataForCylinders = nullptr;										// the ARGB code for each end point of a cylinder
-		unsigned int *flagDataForCylinders = nullptr;								// flags
-		unsigned int *nodeIndexDataForCylinders = nullptr;							// controls if the cylinder is highlighted, selected
+		std::vector<SBPosition3> positions;
 
+		for (unsigned int step = 0; step < numberOfSteps; step++)
+			positions.push_back(computePosition(path, temporaryAtomIndexer, step));
 
-		if (renderingPass == SBNode::RenderingPass::OpaqueGeometry) {
+		// add the path and its positions
 
-			colorDataForCylinders = new float[4 * 2 * nCylinders];
-			flagDataForCylinders = new unsigned int[2 * nCylinders];
-
-		}
-
-		if (renderingPass == SBNode::RenderingPass::SelectableGeometry)
-			nodeIndexDataForCylinders = new unsigned int[2 * nCylinders];
-
-		SBPosition3 position2 = computePosition(path, temporaryAtomIndexer, 0);
-		SBPosition3 position1 = position2;
-
-		unsigned int is2, is6, is8;
-
-		for (unsigned int is = 0; is < numberOfSteps - 1; is++) {
-
-			is2 = 2 * is;
-			is6 = 6 * is;
-			is8 = 8 * is;
-
-			position1 = position2;
-			position2 = computePosition(path, temporaryAtomIndexer, is + 1);
-
-			positionDataForCylinders[is6    ] = static_cast<float>(position1.v[0].getValue());
-			positionDataForCylinders[is6 + 1] = static_cast<float>(position1.v[1].getValue());
-			positionDataForCylinders[is6 + 2] = static_cast<float>(position1.v[2].getValue());
-			positionDataForCylinders[is6 + 3] = static_cast<float>(position2.v[0].getValue());
-			positionDataForCylinders[is6 + 4] = static_cast<float>(position2.v[1].getValue());
-			positionDataForCylinders[is6 + 5] = static_cast<float>(position2.v[2].getValue());
-
-			radiusDataForCylinders[is2    ] = static_cast<float>(radius.getValue());
-			radiusDataForCylinders[is2 + 1] = static_cast<float>(radius.getValue());
-
-			indexDataForCylinders[is2    ] = is2;
-			indexDataForCylinders[is2 + 1] = is2 + 1;
-
-			if (renderingPass == SBNode::RenderingPass::OpaqueGeometry) {
-
-				colorDataForCylinders[is8    ] = colorRed;
-				colorDataForCylinders[is8 + 1] = colorGreen;
-				colorDataForCylinders[is8 + 2] = colorBlue;
-				colorDataForCylinders[is8 + 3] = 1.0f;
-				colorDataForCylinders[is8 + 4] = colorRed;
-				colorDataForCylinders[is8 + 5] = colorGreen;
-				colorDataForCylinders[is8 + 6] = colorBlue;
-				colorDataForCylinders[is8 + 7] = 1.0f;
-
-				flagDataForCylinders[is2    ] = path->getInheritedFlags() | getInheritedFlags();
-				flagDataForCylinders[is2 + 1] = path->getInheritedFlags() | getInheritedFlags();
-
-			}
-
-			if (renderingPass == SBNode::RenderingPass::SelectableGeometry) {
-
-				nodeIndexDataForCylinders[is2 + 0] = nodeIndex;
-				nodeIndexDataForCylinders[is2 + 1] = nodeIndex;
-
-			}
-
-		}
-
-		if (renderingPass == SBNode::RenderingPass::OpaqueGeometry) {
-
-			// display opaque geometry
-
-			SAMSON::displayLineSweptSpheres(nCylinders, nPositionsForCylinders, indexDataForCylinders, positionDataForCylinders, radiusDataForCylinders,
-											colorDataForCylinders, flagDataForCylinders, false);
-
-		}
-		else if (renderingPass == SBNode::RenderingPass::ShadowingGeometry) {
-
-			// display for shadows
-
-			SAMSON::displayLineSweptSpheres(nCylinders, nPositionsForCylinders, indexDataForCylinders, positionDataForCylinders, radiusDataForCylinders,
-											colorDataForCylinders, flagDataForCylinders, true);
-
-		}
-		else if (renderingPass == SBNode::RenderingPass::SelectableGeometry) {
-
-			// display for selection
-
-			SAMSON::displayLineSweptSpheresSelection(nCylinders, nPositionsForCylinders, indexDataForCylinders, positionDataForCylinders, radiusDataForCylinders, nodeIndexDataForCylinders);
-
-		}
-
-		if (indexDataForCylinders) delete[] indexDataForCylinders;
-		if (positionDataForCylinders) delete[] positionDataForCylinders;
-		if (radiusDataForCylinders) delete[] radiusDataForCylinders;
-		if (colorDataForCylinders) delete[] colorDataForCylinders;
-		if (flagDataForCylinders) delete[] flagDataForCylinders;
-
-		if (nodeIndexDataForCylinders) delete[] nodeIndexDataForCylinders;
-
-
-		temporaryAtomIndexer.clear();
+		vectorOfPathsWithPositions.push_back({ path, std::move(positions) });
 
 	}
 
@@ -512,9 +742,16 @@ void SEPathlineOfCenterOfMassVisualModel::onBaseEvent(SBBaseEvent* baseEvent) {
 	// SAMSON Element generator pro tip: implement this function if you need to handle base events (e.g. when a node for which you provide a visual representation emits a base signal, such as when it is erased)
 
 	switch (baseEvent->getType()) {
+
 	case SBBaseEvent::MaterialAdded:
 	case SBBaseEvent::MaterialChanged:
 	case SBBaseEvent::MaterialRemoved:
+
+		populateColorData();
+		update();
+		break;
+
+	case SBBaseEvent::IndexChanged:
 
 		update();
 		break;
