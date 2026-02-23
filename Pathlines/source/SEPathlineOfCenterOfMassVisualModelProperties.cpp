@@ -2,12 +2,13 @@
 #include "SEPathlineOfCenterOfMassVisualModel.hpp"
 #include "SAMSON.hpp"
 #include "SBGWindow.hpp"
+#include "ui_SEPathlineOfCenterOfMassVisualModelProperties.h"
 
-SEPathlineOfCenterOfMassVisualModelProperties::SEPathlineOfCenterOfMassVisualModelProperties() {
+SEPathlineOfCenterOfMassVisualModelProperties::SEPathlineOfCenterOfMassVisualModelProperties() : ui(std::make_unique<Ui::SEPathlineOfCenterOfMassVisualModelPropertiesClass>()) {
 
 	visualModel = nullptr;
 
-	ui.setupUi(this);
+	ui->setupUi(this);
 
 	observer = new Observer(this);
 
