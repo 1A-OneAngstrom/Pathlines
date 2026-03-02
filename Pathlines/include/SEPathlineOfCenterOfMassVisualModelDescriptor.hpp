@@ -22,20 +22,20 @@ SB_CLASS_BEGIN(SEPathlineOfCenterOfMassVisualModel);
 
 	SB_FACTORY_BEGIN;
 
-		SB_CONSTRUCTOR_0(SEPathlineOfCenterOfMassVisualModel);
-		SB_CONSTRUCTOR_1(SEPathlineOfCenterOfMassVisualModel, const SBNodeIndexer&);
+		SB_CONSTRUCTOR_0();
+		SB_CONSTRUCTOR_1(const SBNodeIndexer&);
 
 	SB_FACTORY_END;
 
 	SB_INTERFACE_BEGIN;
 	
-		SB_ATTRIBUTE_READ_WRITE_RESET_RANGE(const SBQuantity::length&, SEPathlineOfCenterOfMassVisualModel, Radius, "Radius", "Geometry");
+		SB_ATTRIBUTE_READ_WRITE_RESET_RANGE(const SBQuantity::length&, Radius, "Radius", "Geometry");
 		
-		SB_ATTRIBUTE_READ_ONLY(SBDDataGraphNodeMaterial*, SEPathlineOfCenterOfMassVisualModel, Material, "Material", "Display");
-		SB_ATTRIBUTE_READ_WRITE_RESET_RANGE_SLIDER(unsigned int, SEPathlineOfCenterOfMassVisualModel, Transparency, "Transparency", "Display");
+		SB_ATTRIBUTE_READ_ONLY(SBDDataGraphNodeMaterial*, Material, "Material", "Display");
+		SB_ATTRIBUTE_READ_WRITE_RESET_RANGE_SLIDER(unsigned int, Transparency, "Transparency", "Display");
 
-		SB_ATTRIBUTE_PUSH_BUTTON(SEPathlineOfCenterOfMassVisualModel, "Select atoms", "Atoms", "Node", selectAtoms);
-		SB_ATTRIBUTE_PUSH_BUTTON(SEPathlineOfCenterOfMassVisualModel, "Select paths", "Paths", "Node", selectPaths);
+		SB_ATTRIBUTE_PUSH_BUTTON("Select atoms", "Atoms", "Node", selectAtoms);
+		SB_ATTRIBUTE_PUSH_BUTTON("Select paths", "Paths", "Node", selectPaths);
 
 	SB_INTERFACE_END;
 
