@@ -17,7 +17,7 @@ SB_CLASS_BEGIN(SEPathlineOfCenterOfMassVisualModelProperties);
 
 	SB_FACTORY_BEGIN;
 
-		SB_CONSTRUCTOR_0(SEPathlineOfCenterOfMassVisualModelProperties);
+		SB_CONSTRUCTOR_0();
 
 	SB_FACTORY_END;
 
