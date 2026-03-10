@@ -15,8 +15,7 @@ CTestTestfile.cmake
 
 ################
 # folders
-build/*
-/build
+build*
 
 ################
 # C++.gitignore

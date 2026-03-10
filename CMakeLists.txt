@@ -9,15 +9,15 @@
 
 cmake_minimum_required(VERSION 4.0)
 
-if(UNIX)
-	if(DEBUG) 
-        project (Pathlines-debug)
-	else(DEBUG) 
-		project (Pathlines-release)
-	endif(DEBUG)
-else(UNIX)
-	project (Pathlines)
-endif(UNIX)
+if( UNIX )
+	if( DEBUG ) 
+		project (Pathlines-debug )
+	else( DEBUG ) 
+		project ( Pathlines-release )
+	endif( DEBUG )
+else( UNIX )
+	project ( Pathlines )
+endif( UNIX )
 
 # ---- Architecture selection (Jenkins may pass: -DARCH=arm64 or -DARCH=x86_64)
 set(ARCH "x86_64" CACHE STRING "Target architecture (arm64 or x86_64)")
@@ -43,33 +43,61 @@ add_definitions(-D SAMSON_BASE_BUILD)
 # GETTING SAMSON_SDK_PATH #
 ########################### 
 
-if(SAMSON_SDK_PATH)
-	file(TO_CMAKE_PATH ${SAMSON_SDK_PATH} CMAKE_SAMSON_SDK_PATH)
-else(SAMSON_SDK_PATH)
-	if(DEFINED ENV{SAMSON_SDK_PATH})
-		file(TO_CMAKE_PATH $ENV{SAMSON_SDK_PATH} CMAKE_SAMSON_SDK_PATH)
-	else(DEFINED ENV{SAMSON_SDK_PATH})
-		message("SAMSON_SDK_PATH is not defined, should be defined at cmake runtime or in environment variables")
-	endif(DEFINED ENV{SAMSON_SDK_PATH})
-endif(SAMSON_SDK_PATH)
+if( SAMSON_SDK_PATH )
+	file( TO_CMAKE_PATH ${SAMSON_SDK_PATH} CMAKE_SAMSON_SDK_PATH )
+else( SAMSON_SDK_PATH )
+	if( DEFINED ENV{SAMSON_SDK_PATH} )
+		file( TO_CMAKE_PATH $ENV{SAMSON_SDK_PATH} CMAKE_SAMSON_SDK_PATH )
+	else( DEFINED ENV{SAMSON_SDK_PATH} )
+		message( "SAMSON_SDK_PATH is not defined, should be defined at cmake runtime or in environment variables" )
+	endif( DEFINED ENV{SAMSON_SDK_PATH} )
+endif( SAMSON_SDK_PATH )
 
-# Qt6 prefix: e.g. C:/Qt/6.X.X/msvcXXXX_64
-if(QT6_DIR)
+
+# Resolve Qt prefix
+set(_qt6_prefix "")
+
+if(DEFINED QT6_DIR AND QT6_DIR)
   file(TO_CMAKE_PATH "${QT6_DIR}" _qt6_prefix)
-elseif(DEFINED ENV{QT6_DIR})
+elseif(DEFINED ENV{QT6_DIR} AND NOT "$ENV{QT6_DIR}" STREQUAL "")
   file(TO_CMAKE_PATH "$ENV{QT6_DIR}" _qt6_prefix)
 else()
-  message(FATAL_ERROR
-    "QT6_DIR is not defined. Define it via -DQT6_DIR=... or env QT6_DIR "
-    "(expected <Qt>/<version>/<compiler>, e.g. C:/Qt/6.x.x/msvcXXXX_64)."
- )
+  if(UNIX)
+    if(APPLE)
+      message(FATAL_ERROR 
+      "Qt path not defined. Use -DQT6_DIR=/home/Users/<username>/Qt/6.X.X/macos or set QT6_DIR environment variable. Example: QT6_DIR=/home/Users/johndoe/Qt/6.10.2/macos")
+    else()
+      message(FATAL_ERROR
+      "Qt path not defined. Use -DQT6_DIR=/home/<username>/Qt/6.X.X/gcc_64 or set QT6_DIR environment variable. Example: QT6_DIR=/home/johndoe/Qt/6.10.2/gcc_64")
+    endif()
+  else()
+    message(FATAL_ERROR
+    "Qt path not defined. Use -DQT6_DIR=C:/Qt/6.X.X/msvcXXXX_64 or set QT6_DIR environment variable. Example: QT6_DIR=C:/Qt/6.10.2/msvc2022_64")
+  endif()
 endif()
 
-list(APPEND CMAKE_PREFIX_PATH "${_qt6_prefix}")
+# Normalize if user passed .../lib/cmake or .../lib/cmake/Qt6
+if(_qt6_prefix MATCHES "/lib/cmake/Qt[56]/?$")
+  get_filename_component(_qt6_prefix "${_qt6_prefix}" DIRECTORY) # cmake
+  get_filename_component(_qt6_prefix "${_qt6_prefix}" DIRECTORY) # lib
+  get_filename_component(_qt6_prefix "${_qt6_prefix}" DIRECTORY) # prefix
+elseif(_qt6_prefix MATCHES "/lib/cmake/?$")
+  get_filename_component(_qt6_prefix "${_qt6_prefix}" DIRECTORY) # lib
+  get_filename_component(_qt6_prefix "${_qt6_prefix}" DIRECTORY) # prefix
+endif()
+
+# Append only once
+list(FIND CMAKE_PREFIX_PATH "${_qt6_prefix}" _qt6_index)
+if(_qt6_index EQUAL -1)
+  list(APPEND CMAKE_PREFIX_PATH "${_qt6_prefix}")
+endif()
+
+# Store globally (clean solution)
+set_property(GLOBAL PROPERTY QT6_PREFIX "${_qt6_prefix}")
 
 cmake_policy(SET CMP0020 NEW)
 
-#to fix eigen include with cmake >= 4
+# to fix eigen include with cmake >= 4
 if(POLICY CMP0169) 
   cmake_policy(SET CMP0169 OLD)
 endif()
@@ -81,8 +109,8 @@ list(APPEND CMAKE_MODULE_PATH
 )
 list(REMOVE_DUPLICATES CMAKE_MODULE_PATH)
 
-set (SAMSON_LIBRARIES_PATH "${CMAKE_SAMSON_SDK_PATH}/libs")
-set (SAMSON_INCLUDE_PATH "${CMAKE_SAMSON_SDK_PATH}/include/")
+set ( SAMSON_LIBRARIES_PATH "${CMAKE_SAMSON_SDK_PATH}/libs" )
+set ( SAMSON_INCLUDE_PATH "${CMAKE_SAMSON_SDK_PATH}/include/" )
 
 # VERSION_HASH information : New since SAMSON 0.8.0
 #
@@ -92,28 +120,28 @@ set (SAMSON_INCLUDE_PATH "${CMAKE_SAMSON_SDK_PATH}/include/")
 # If you upload your element on samson-connect, you will see this information next to your element inside My SAMSON->My Factory->Edit Element.
 
 # you can choose either git either svn either nothing
-set (USE_GIT 1)
-set (USE_SVN 0)
+set ( USE_GIT 1 )
+set ( USE_SVN 0 )
 
-if(${USE_GIT})
+if( ${USE_GIT} )
 	# if USE_GIT=1 the next command will get the current commit hash and will store 
 	# it inside VERSION_HASH variable.
-	message(STATUS "Getting current git commit hash and storing it inside VERSION_HASH variable.")
+	message(STATUS "Getting current git commit hash and storing it inside VERSION_HASH variable." )
 	execute_process(
 	  COMMAND git log -1 --format=%H
 	  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/SAMSON-Element
 	  OUTPUT_VARIABLE VERSION_HASH
 	  OUTPUT_STRIP_TRAILING_WHITESPACE
-	)
+	 )
 else (${USE_GIT})
 	if (${USE_SVN})
 		# if USE_SVN=1 and USE_GIT=0 the next command will get the current commit revision
 		# of your working copy and will store it inside VERSION_HASH variable.
-		message("Getting current svn revision and storing it inside VERSION_HASH variable.")
+		message( "Getting current svn revision and storing it inside VERSION_HASH variable." )
 		find_package(Subversion)
 		if(SUBVERSION_FOUND)
 		  Subversion_WC_INFO(${CMAKE_SOURCE_DIR} REPO)
-		  set (VERSION_HASH ${REPO_WC_REVISION})
+		  set ( VERSION_HASH ${REPO_WC_REVISION} )
 		endif()
 	else (${USE_SVN})
 		# if USE_SVN=0 and USE_GIT=0 we set the variable VERSION_HASH equal to 
@@ -124,26 +152,26 @@ endif(${USE_GIT})
 
 # we create ElementVersionHash.cmake file in CMAKE_SOURCE_DIR folder containing the corresponding VERSION_HASH
 # This file just creates add definition of SB_ELEMENT_VERSION_HASH accessible throught the code.
-file (WRITE ElementVersionHash.cmake "ADD_DEFINITIONS\(-DSB_ELEMENT_VERSION_HASH=\"${VERSION_HASH}\"\)\n")
+file ( WRITE ElementVersionHash.cmake "ADD_DEFINITIONS\(-DSB_ELEMENT_VERSION_HASH=\"${VERSION_HASH}\"\)\n" )
 
-include (ElementVersionHash)
+include ( ElementVersionHash )
 
 # End off VERSION_HASH information
 
-include (SDKConfiguration)
+include ( SDKConfiguration )
 
-if(UUIDSETTINGS) 
-	include (SBPublicUUIDVar)
-else(UUIDSETTINGS) 
-	include (SBPublicVerboseVar)
-endif(UUIDSETTINGS)
-include (SBPublicDefinitions)
+if( UUIDSETTINGS ) 
+	include ( SBPublicUUIDVar )
+else( UUIDSETTINGS ) 
+	include ( SBPublicVerboseVar )
+endif( UUIDSETTINGS )
+include ( SBPublicDefinitions )
 
-include (SDKDeveloperDefinitions)
-include (SDKFunctions)
-include (SDKVersion)
+include ( SDKDeveloperDefinitions )
+include ( SDKFunctions )
+include ( SDKVersion )
 
-include (SBOpenGLVersion)
+include ( SBOpenGLVersion )
 
 message(STATUS "CMAKE_SOURCE_DIR  : ${CMAKE_SOURCE_DIR}")
 
@@ -158,9 +186,9 @@ message(STATUS "SAMSON_SDK_PATH   : ${CMAKE_SAMSON_SDK_PATH}")
 message(STATUS "ARCH              : ${ARCH}")
 message(STATUS "FORCE_X86_64      : ${FORCE_X86_64}")
 
-file(TO_CMAKE_PATH ${CMAKE_SAMSON_DEVELOPPER_DATA_PATH}/Elements CMAKE_SAMSON_ELEMENT_PATH)
+file( TO_CMAKE_PATH ${CMAKE_SAMSON_DEVELOPPER_DATA_PATH}/Elements CMAKE_SAMSON_ELEMENT_PATH )
  
-find_package (SAMSONSDK REQUIRED)
+find_package ( SAMSONSDK REQUIRED )
 
 set(QT_FRAMEWORKS
   Core
@@ -175,6 +203,7 @@ set(QT_FRAMEWORKS
   PrintSupport
   Sql
   Svg
+  SvgWidgets
   WebChannel
   WebEngineCore
   WebEngineQuick
@@ -193,6 +222,10 @@ foreach(FRAMEWORK IN LISTS QT_FRAMEWORKS)
   endif()
 endforeach()
 
-find_package (OpenGL)
+find_package ( OpenGL )
+
+############################
+# SAMSON Extension folders #
+############################
 
 ADD_SUBDIRECTORY(Pathlines)
