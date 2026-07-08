@@ -1,10 +1,300 @@
 #include "SEPathlineOfCenterOfMassVisualModel.hpp"
 #include "SAMSON.hpp"
+#include "SBMesh.hpp"
+#include "SBNodeColorScheme.hpp"
 #include "SBQuantity.hpp"
+#include "SBSurface.hpp"
 #include "SBDColorSchemeConstant.hpp"
 #include "SBDDataGraphNodeMaterial.hpp"
 
 #include <QOpenGLShaderProgram>
+
+#include <array>
+#include <cmath>
+#include <cstring>
+#include <numeric>
+#include <utility>
+#include <vector>
+
+namespace {
+
+constexpr double Pi = 3.141592653589793238462643383279502884;
+constexpr double DegenerateLengthSquared = 1.0e-10;
+constexpr unsigned int MeshSphereLatitudeDetail = 12;
+constexpr unsigned int MeshSphereLongitudeDetail = 24;
+constexpr unsigned int MeshCylinderDetail = 25;
+
+using Point = std::array<double, 3>;
+
+struct SurfaceData {
+	std::vector<unsigned int>									indexData;
+	std::vector<float>											positionData;
+	std::vector<float>											normalData;
+	std::vector<float>											colorData;
+	std::vector<unsigned int>									flagData;
+	std::vector<unsigned int>									nodeIndexData;
+	std::vector<float>											textureCoordinateData;
+};
+
+template <typename T>
+T* copyVectorToNewArray(const std::vector<T>& source) {
+
+	if (source.empty()) return nullptr;
+
+	T* destination = new T[source.size()];
+	std::memcpy(destination, source.data(), source.size() * sizeof(T));
+	return destination;
+
+}
+
+Point operator+(const Point& a, const Point& b) {
+
+	return { a[0] + b[0], a[1] + b[1], a[2] + b[2] };
+
+}
+
+Point operator-(const Point& a, const Point& b) {
+
+	return { a[0] - b[0], a[1] - b[1], a[2] - b[2] };
+
+}
+
+Point operator*(double scale, const Point& a) {
+
+	return { scale * a[0], scale * a[1], scale * a[2] };
+
+}
+
+double squaredNorm(const Point& a) {
+
+	return a[0] * a[0] + a[1] * a[1] + a[2] * a[2];
+
+}
+
+Point cross(const Point& a, const Point& b) {
+
+	return {
+		a[1] * b[2] - a[2] * b[1],
+		a[2] * b[0] - a[0] * b[2],
+		a[0] * b[1] - a[1] * b[0]
+	};
+
+}
+
+Point normalized(const Point& a) {
+
+	const double norm = std::sqrt(squaredNorm(a));
+	if (norm <= 0.0) return { 0.0, 0.0, 0.0 };
+
+	return (1.0 / norm) * a;
+
+}
+
+void appendVertex(
+	SurfaceData& surfaceData,
+	const Point& position,
+	const Point& normal,
+	const std::array<float, 4>& color,
+	unsigned int flag,
+	unsigned int nodeIndex,
+	float textureU = 0.0f,
+	float textureV = 0.0f) {
+
+	surfaceData.positionData.push_back(static_cast<float>(position[0]));
+	surfaceData.positionData.push_back(static_cast<float>(position[1]));
+	surfaceData.positionData.push_back(static_cast<float>(position[2]));
+
+	surfaceData.normalData.push_back(static_cast<float>(normal[0]));
+	surfaceData.normalData.push_back(static_cast<float>(normal[1]));
+	surfaceData.normalData.push_back(static_cast<float>(normal[2]));
+
+	surfaceData.colorData.insert(surfaceData.colorData.end(), color.begin(), color.end());
+	surfaceData.flagData.push_back(flag);
+	surfaceData.nodeIndexData.push_back(nodeIndex);
+	surfaceData.textureCoordinateData.push_back(textureU);
+	surfaceData.textureCoordinateData.push_back(textureV);
+
+}
+
+void appendSphereSurface(
+	SurfaceData& surfaceData,
+	const Point& center,
+	double radius,
+	const std::array<float, 4>& color,
+	unsigned int flag,
+	unsigned int nodeIndex,
+	unsigned int latitudeDetail = MeshSphereLatitudeDetail,
+	unsigned int longitudeDetail = MeshSphereLongitudeDetail) {
+
+	if (latitudeDetail == 0 || longitudeDetail == 0) return;
+	if (radius <= 0.0 || !std::isfinite(radius)) return;
+
+	const unsigned int sphereOffset = static_cast<unsigned int>(surfaceData.positionData.size() / 3);
+
+	for (unsigned int latitude = 0; latitude <= latitudeDetail; ++latitude) {
+
+		const double phi = Pi * static_cast<double>(latitude) / static_cast<double>(latitudeDetail);
+		const double sinPhi = std::sin(phi);
+		const double cosPhi = std::cos(phi);
+
+		for (unsigned int longitude = 0; longitude <= longitudeDetail; ++longitude) {
+
+			const double theta = 2.0 * Pi * static_cast<double>(longitude) / static_cast<double>(longitudeDetail);
+			const double sinTheta = std::sin(theta);
+			const double cosTheta = std::cos(theta);
+			const Point normal{ sinPhi * cosTheta, cosPhi, sinPhi * sinTheta };
+			const Point position = Point{
+				center[0] + radius * normal[0],
+				center[1] + radius * normal[1],
+				center[2] + radius * normal[2]
+			};
+
+			appendVertex(surfaceData, position, normal, color, flag, nodeIndex,
+				static_cast<float>(longitude) / static_cast<float>(longitudeDetail),
+				static_cast<float>(latitude) / static_cast<float>(latitudeDetail));
+
+		}
+
+	}
+
+	for (unsigned int latitude = 0; latitude < latitudeDetail; ++latitude) {
+
+		for (unsigned int longitude = 0; longitude < longitudeDetail; ++longitude) {
+
+			const unsigned int row0 = sphereOffset + latitude * (longitudeDetail + 1);
+			const unsigned int row1 = row0 + longitudeDetail + 1;
+			const unsigned int index0 = row0 + longitude;
+			const unsigned int index1 = index0 + 1;
+			const unsigned int index2 = row1 + longitude;
+			const unsigned int index3 = index2 + 1;
+
+			surfaceData.indexData.push_back(index0);
+			surfaceData.indexData.push_back(index1);
+			surfaceData.indexData.push_back(index2);
+			surfaceData.indexData.push_back(index1);
+			surfaceData.indexData.push_back(index3);
+			surfaceData.indexData.push_back(index2);
+
+		}
+
+	}
+
+}
+
+void appendCylinderSurface(
+	SurfaceData& surfaceData,
+	const Point& start,
+	const Point& end,
+	double startRadius,
+	double endRadius,
+	const std::array<float, 4>& startColor,
+	const std::array<float, 4>& endColor,
+	unsigned int startFlag,
+	unsigned int endFlag,
+	unsigned int startNodeIndex,
+	unsigned int endNodeIndex,
+	unsigned int detail = MeshCylinderDetail) {
+
+	if (detail < 3) return;
+	if (startRadius <= 0.0 || endRadius <= 0.0) return;
+	if (!std::isfinite(startRadius) || !std::isfinite(endRadius)) return;
+
+	Point direction{ start[0] - end[0], start[1] - end[1], start[2] - end[2] };
+	if (squaredNorm(direction) < DegenerateLengthSquared) return;
+	direction = normalized(direction);
+
+	Point normal = cross(direction, { 1.0, 0.0, 0.0 });
+	if (squaredNorm(normal) < 1.0e-4)
+		normal = cross(direction, { 0.0, 1.0, 0.0 });
+	normal = normalized(normal);
+	const Point binormal = normalized(cross(direction, normal));
+
+	const unsigned int sideOffset = static_cast<unsigned int>(surfaceData.positionData.size() / 3);
+
+	for (unsigned int k = 0; k < detail; ++k) {
+
+		const double theta = 2.0 * Pi * static_cast<double>(k) / static_cast<double>(detail);
+		const Point radialDirection = std::sin(theta) * normal + std::cos(theta) * binormal;
+		const Point startPosition = Point{
+			start[0] + startRadius * radialDirection[0],
+			start[1] + startRadius * radialDirection[1],
+			start[2] + startRadius * radialDirection[2]
+		};
+		const Point endPosition = Point{
+			end[0] + endRadius * radialDirection[0],
+			end[1] + endRadius * radialDirection[1],
+			end[2] + endRadius * radialDirection[2]
+		};
+
+		appendVertex(surfaceData, startPosition, radialDirection, startColor, startFlag, startNodeIndex);
+		appendVertex(surfaceData, endPosition, radialDirection, endColor, endFlag, endNodeIndex);
+
+	}
+
+	for (unsigned int k = 0; k < detail; ++k) {
+
+		const unsigned int next = (k + 1) % detail;
+		const unsigned int start0 = sideOffset + 2 * k;
+		const unsigned int end0 = start0 + 1;
+		const unsigned int start1 = sideOffset + 2 * next;
+		const unsigned int end1 = start1 + 1;
+
+		surfaceData.indexData.push_back(start0);
+		surfaceData.indexData.push_back(end1);
+		surfaceData.indexData.push_back(end0);
+		surfaceData.indexData.push_back(start0);
+		surfaceData.indexData.push_back(start1);
+		surfaceData.indexData.push_back(end1);
+
+	}
+
+}
+
+SBSurface* createSurfaceFromGeometryData(const SurfaceData& surfaceData) {
+
+	if (surfaceData.indexData.empty() || surfaceData.positionData.empty()) return nullptr;
+
+	const unsigned int numberOfTriangles = static_cast<unsigned int>(surfaceData.indexData.size() / 3);
+	const unsigned int numberOfPositions = static_cast<unsigned int>(surfaceData.positionData.size() / 3);
+	if (numberOfTriangles == 0 || numberOfPositions == 0) return nullptr;
+
+	unsigned int* indexData = copyVectorToNewArray(surfaceData.indexData);
+	float* positionData = copyVectorToNewArray(surfaceData.positionData);
+	float* normalData = copyVectorToNewArray(surfaceData.normalData);
+	float* colorData = copyVectorToNewArray(surfaceData.colorData);
+	unsigned int* flagData = copyVectorToNewArray(surfaceData.flagData);
+	unsigned int* nodeIndexData = copyVectorToNewArray(surfaceData.nodeIndexData);
+	float* textureCoordinateData = copyVectorToNewArray(surfaceData.textureCoordinateData);
+
+	return new SBSurface(numberOfTriangles, numberOfPositions, indexData, positionData, normalData, colorData, flagData, nodeIndexData, textureCoordinateData, nullptr);
+
+}
+
+void clearGeneratedMeshFlags(SBSurface* surface) {
+
+	if (!surface) return;
+
+	unsigned int* flagData = surface->getFlagData();
+	if (!flagData) return;
+
+	std::memset(flagData, 0, surface->getNumberOfPositions() * sizeof(unsigned int));
+
+}
+
+std::array<float, 4> getColorAt(const float* colorData, unsigned int positionIndex, const std::array<float, 4>& fallbackColor) {
+
+	if (!colorData) return fallbackColor;
+
+	return {
+		colorData[4 * positionIndex + 0],
+		colorData[4 * positionIndex + 1],
+		colorData[4 * positionIndex + 2],
+		colorData[4 * positionIndex + 3]
+	};
+
+}
+
+}
 
 SB_OPENGL_FUNCTIONS* SEPathlineOfCenterOfMassVisualModel::gl = nullptr;
 
@@ -409,101 +699,7 @@ void SEPathlineOfCenterOfMassVisualModel::display(SBNode::RenderingPass renderin
 
 	if (pathIndexer.size() == 0) return;
 	if (atomIndexer.size() == 0) return;
-
-	// compute positions along paths, if necessary
-
-	if (vectorOfPathsWithPositions.size() == 0)
-		computePositionsAlongPaths();
-
-	unsigned int newNumberOfCylinders = 0;
-	for (const auto& it : std::as_const(vectorOfPathsWithPositions)) {
-
-		SBPath* path = it.first();
-		newNumberOfCylinders += path->getNumberOfSteps() - 1;	// the number of cylinders between steps
-
-	}
-
-	if (numberOfCylinders != newNumberOfCylinders) {
-
-		numberOfCylinders = newNumberOfCylinders;
-		numberOfPositionsForCylinders = 2 * newNumberOfCylinders;
-
-		// re-allocate data arrays
-
-		delete[] indexData;
-		delete[] positionData;
-		delete[] radiusData;
-		delete[] colorData;
-		delete[] flagData;
-		delete[] nodeIndexData;
-		delete[] capData;
-		delete[] materialData;
-		delete[] nodeData;
-
-		indexData = new unsigned int[numberOfPositionsForCylinders]();
-		positionData = new float[3 * numberOfPositionsForCylinders]();
-		radiusData = new float[numberOfPositionsForCylinders]();
-		colorData = new float[4 * numberOfPositionsForCylinders]();
-		flagData = new unsigned int[numberOfPositionsForCylinders]();
-		nodeIndexData = new unsigned int[numberOfPositionsForCylinders]();
-		capData = new unsigned int[numberOfPositionsForCylinders]();
-		materialData = new SBNodeMaterial*[numberOfPositionsForCylinders];
-		nodeData = new SBNode*[numberOfPositionsForCylinders];
-
-		if (cylinderArray.isValid()) {
-
-			cylinderArray->setNumberOfGeometries(numberOfCylinders);
-			cylinderArray->setNumberOfPositions(numberOfPositionsForCylinders);
-			cylinderArray->setPositionData(positionData);
-			cylinderArray->setIndexData(indexData);
-			cylinderArray->setColorData(colorData);
-			cylinderArray->setMaterialData(materialData);
-			cylinderArray->setNodeData(nodeData);
-			cylinderArray->setRadiusData(radiusData);
-			cylinderArray->setCapData(capData);
-			cylinderArray->setFlagData(flagData);
-			cylinderArray->setNodeIndexData(nodeIndexData);
-
-		}
-
-		// populate data arrays
-
-		std::iota(indexData, indexData + numberOfPositionsForCylinders, 0);
-		std::fill_n(capData, numberOfPositionsForCylinders, 0);							// 1 - close the caps; 0 - don't close the caps
-		
-		populateRadiusData();
-		populateColorData();
-
-		unsigned int shift = 0;
-
-		for (const auto& it : std::as_const(vectorOfPathsWithPositions)) {
-
-			SBPath* path = it.first();
-			const std::vector<SBPosition3>& positions = it.second;
-			if (!path || positions.size() == 0) continue;
-
-			const unsigned int numberOfSteps = path->getNumberOfSteps();
-
-			std::fill_n(nodeData + 2 * shift, 2 * (numberOfSteps - 1), path);
-
-			for (unsigned int step = 0; step < numberOfSteps - 1; step++) {
-
-				const unsigned int i6 = 6 * (step + shift);
-
-				positionData[i6 + 0] = static_cast<float>(positions[step].v[0].getValue());
-				positionData[i6 + 1] = static_cast<float>(positions[step].v[1].getValue());
-				positionData[i6 + 2] = static_cast<float>(positions[step].v[2].getValue());
-				positionData[i6 + 3] = static_cast<float>(positions[step + 1].v[0].getValue());
-				positionData[i6 + 4] = static_cast<float>(positions[step + 1].v[1].getValue());
-				positionData[i6 + 5] = static_cast<float>(positions[step + 1].v[2].getValue());
-
-			}
-
-			shift += numberOfSteps - 1;
-
-		}
-
-	}
+	if (!ensureCylinderData(false)) return;
 
 	// populate data arrays
 
@@ -513,9 +709,9 @@ void SEPathlineOfCenterOfMassVisualModel::display(SBNode::RenderingPass renderin
 
 		SBPath* path = it.first();
 		const std::vector<SBPosition3>& positions = it.second;
-		if (!path || positions.size() == 0) continue;
+		if (!path || positions.size() < 2) continue;
 
-		const unsigned int numberOfSteps = path->getNumberOfSteps();
+		const unsigned int numberOfSteps = static_cast<unsigned int>(positions.size());
 
 		std::fill_n(flagData + 2 * shift, 2 * (numberOfSteps - 1), path->getInheritedFlags() | getInheritedFlags());
 		std::fill_n(nodeIndexData + 2 * shift, 2 * (numberOfSteps - 1), path->getNodeIndex());
@@ -571,6 +767,227 @@ void SEPathlineOfCenterOfMassVisualModel::display(SBNode::RenderingPass renderin
 
 }
 
+bool SEPathlineOfCenterOfMassVisualModel::canCreateMesh() const {
+
+	return true;
+
+}
+
+SBMVisualModelMesh* SEPathlineOfCenterOfMassVisualModel::createMesh() {
+
+	if (!ensureCylinderData(true)) return nullptr;
+
+	SurfaceData surfaceData;
+
+	unsigned int shift = 0;
+
+	for (const auto& it : std::as_const(vectorOfPathsWithPositions)) {
+
+		SBPath* path = it.first();
+		const std::vector<SBPosition3>& positions = it.second;
+		if (!path || positions.size() < 2) continue;
+
+		const unsigned int firstPositionIndex = 2 * shift;
+		const unsigned int pathNodeIndex = path->getNodeIndex();
+		const unsigned int pathFlag = path->getInheritedFlags() | getInheritedFlags();
+		const std::array<float, 4> pathColor = getColorAt(colorData, firstPositionIndex, { color[0], color[1], color[2], color[3] });
+
+		for (const SBPosition3& position : positions) {
+
+			appendSphereSurface(surfaceData,
+				{
+					position.v[0].getValue(),
+					position.v[1].getValue(),
+					position.v[2].getValue()
+				},
+				radius.getValue(),
+				pathColor,
+				pathFlag,
+				pathNodeIndex);
+
+		}
+
+		for (unsigned int step = 0; step + 1 < positions.size(); ++step) {
+
+			const unsigned int startPositionIndex = 2 * (step + shift);
+			const unsigned int endPositionIndex = startPositionIndex + 1;
+
+			appendCylinderSurface(surfaceData,
+				{
+					positions[step].v[0].getValue(),
+					positions[step].v[1].getValue(),
+					positions[step].v[2].getValue()
+				},
+				{
+					positions[step + 1].v[0].getValue(),
+					positions[step + 1].v[1].getValue(),
+					positions[step + 1].v[2].getValue()
+				},
+				radiusData ? radiusData[startPositionIndex] : radius.getValue(),
+				radiusData ? radiusData[endPositionIndex] : radius.getValue(),
+				getColorAt(colorData, startPositionIndex, pathColor),
+				getColorAt(colorData, endPositionIndex, pathColor),
+				pathFlag,
+				pathFlag,
+				pathNodeIndex,
+				pathNodeIndex);
+
+		}
+
+		shift += static_cast<unsigned int>(positions.size()) - 1;
+
+	}
+
+	SBSurface* surface = createSurfaceFromGeometryData(surfaceData);
+	if (!surface) return nullptr;
+
+	clearGeneratedMeshFlags(surface);
+
+	SBVector<SBSurface*> surfaceVector;
+	surfaceVector.push_back(surface);
+
+	SBMesh* mesh = new SBMesh(surfaceVector);
+	mesh->setOpacity(getOpacity());
+
+	// Keep the generated vertex colors visible on the converted mesh.
+	mesh->setDiffuseColorReplacement(mesh->getMinimumDiffuseColorReplacement());
+
+	if (SBNodeMaterial* material = getMaterial()) {
+
+		SBNodeMaterial* meshMaterial = new SBNodeMaterial();
+		meshMaterial->setMaterialAppearance(material->getMaterialAppearance());
+
+		if (SBNodeColorScheme* colorScheme = material->getColorScheme())
+			meshMaterial->setColorScheme(colorScheme->clone());
+
+		if (!mesh->addMaterial(meshMaterial))
+			delete meshMaterial;
+
+	}
+
+	return mesh;
+
+}
+
+bool SEPathlineOfCenterOfMassVisualModel::ensureCylinderData(bool refreshAppearance) {
+
+	if (pathIndexer.size() == 0 || atomIndexer.size() == 0) return false;
+
+	if (vectorOfPathsWithPositions.empty())
+		computePositionsAlongPaths();
+
+	unsigned int newNumberOfCylinders = 0;
+	for (const auto& it : std::as_const(vectorOfPathsWithPositions)) {
+
+		const std::vector<SBPosition3>& positions = it.second;
+		if (positions.size() > 1)
+			newNumberOfCylinders += static_cast<unsigned int>(positions.size()) - 1;
+
+	}
+
+	if (numberOfCylinders != newNumberOfCylinders) {
+
+		numberOfCylinders = newNumberOfCylinders;
+		numberOfPositionsForCylinders = 2 * newNumberOfCylinders;
+
+		delete[] indexData;
+		delete[] positionData;
+		delete[] radiusData;
+		delete[] colorData;
+		delete[] flagData;
+		delete[] nodeIndexData;
+		delete[] capData;
+		delete[] materialData;
+		delete[] nodeData;
+
+		indexData = numberOfPositionsForCylinders ? new unsigned int[numberOfPositionsForCylinders]() : nullptr;
+		positionData = numberOfPositionsForCylinders ? new float[3 * numberOfPositionsForCylinders]() : nullptr;
+		radiusData = numberOfPositionsForCylinders ? new float[numberOfPositionsForCylinders]() : nullptr;
+		colorData = numberOfPositionsForCylinders ? new float[4 * numberOfPositionsForCylinders]() : nullptr;
+		flagData = numberOfPositionsForCylinders ? new unsigned int[numberOfPositionsForCylinders]() : nullptr;
+		nodeIndexData = numberOfPositionsForCylinders ? new unsigned int[numberOfPositionsForCylinders]() : nullptr;
+		capData = numberOfPositionsForCylinders ? new unsigned int[numberOfPositionsForCylinders]() : nullptr;
+		materialData = numberOfPositionsForCylinders ? new SBNodeMaterial*[numberOfPositionsForCylinders]() : nullptr;
+		nodeData = numberOfPositionsForCylinders ? new SBNode*[numberOfPositionsForCylinders]() : nullptr;
+
+		if (cylinderArray.isValid()) {
+
+			cylinderArray->setNumberOfGeometries(numberOfCylinders);
+			cylinderArray->setNumberOfPositions(numberOfPositionsForCylinders);
+			cylinderArray->setPositionData(positionData);
+			cylinderArray->setIndexData(indexData);
+			cylinderArray->setColorData(colorData);
+			cylinderArray->setMaterialData(materialData);
+			cylinderArray->setNodeData(nodeData);
+			cylinderArray->setRadiusData(radiusData);
+			cylinderArray->setCapData(capData);
+			cylinderArray->setFlagData(flagData);
+			cylinderArray->setNodeIndexData(nodeIndexData);
+
+		}
+
+		if (indexData)
+			std::iota(indexData, indexData + numberOfPositionsForCylinders, 0);
+
+		if (capData)
+			std::fill_n(capData, numberOfPositionsForCylinders, 0);
+
+		refreshAppearance = true;
+
+	}
+
+	if (numberOfCylinders == 0 || numberOfPositionsForCylinders == 0) return false;
+
+	populatePositionAndNodeData();
+
+	if (refreshAppearance) {
+
+		populateRadiusData();
+		populateColorData();
+
+	}
+
+	return true;
+
+}
+
+void SEPathlineOfCenterOfMassVisualModel::populatePositionAndNodeData() {
+
+	if (!positionData || !nodeData) return;
+
+	std::fill_n(nodeData, numberOfPositionsForCylinders, nullptr);
+
+	unsigned int shift = 0;
+
+	for (const auto& it : std::as_const(vectorOfPathsWithPositions)) {
+
+		SBPath* path = it.first();
+		const std::vector<SBPosition3>& positions = it.second;
+		if (!path || positions.size() < 2) continue;
+
+		const unsigned int numberOfSteps = static_cast<unsigned int>(positions.size());
+
+		std::fill_n(nodeData + 2 * shift, 2 * (numberOfSteps - 1), path);
+
+		for (unsigned int step = 0; step + 1 < numberOfSteps; ++step) {
+
+			const unsigned int i6 = 6 * (step + shift);
+
+			positionData[i6 + 0] = static_cast<float>(positions[step].v[0].getValue());
+			positionData[i6 + 1] = static_cast<float>(positions[step].v[1].getValue());
+			positionData[i6 + 2] = static_cast<float>(positions[step].v[2].getValue());
+			positionData[i6 + 3] = static_cast<float>(positions[step + 1].v[0].getValue());
+			positionData[i6 + 4] = static_cast<float>(positions[step + 1].v[1].getValue());
+			positionData[i6 + 5] = static_cast<float>(positions[step + 1].v[2].getValue());
+
+		}
+
+		shift += numberOfSteps - 1;
+
+	}
+
+}
+
 void SEPathlineOfCenterOfMassVisualModel::populateRadiusData() {
 
 	if (radiusData)
@@ -614,7 +1031,7 @@ void SEPathlineOfCenterOfMassVisualModel::populateColorData() {
 
 		SBPath* path = it.first();
 		const std::vector<SBPosition3>& positions = it.second;
-		if (!path || positions.size() == 0) continue;
+		if (!path || positions.size() < 2) continue;
 
 		// if a color scheme with a color palette has been applied to the visual model, then colorize each path in a different color along the palette
 		if (colorScheme && colorScheme->hasPalette()) {
@@ -624,7 +1041,7 @@ void SEPathlineOfCenterOfMassVisualModel::populateColorData() {
 
 		}
 
-		const unsigned int numberOfSteps = path->getNumberOfSteps();
+		const unsigned int numberOfSteps = static_cast<unsigned int>(positions.size());
 
 		for (unsigned int step = 0; step < numberOfSteps - 1; step++) {
 

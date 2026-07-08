@@ -51,6 +51,9 @@ public:
 
 	virtual void												display(SBNode::RenderingPass renderingPass) override;					///< Displays the visual model
 
+	virtual bool												canCreateMesh() const override;											///< Returns true if the visual model can create a mesh
+	virtual SBMVisualModelMesh*									createMesh() override;													///< Returns a mesh constructed from this visual model
+
 	virtual void												expandBounds(SBIAPosition3& bounds) const override;						///< Expands the bounds to make sure the visual model fits inside them
 
 	virtual void												collectAmbientOcclusion(const SBPosition3& boxOrigin, const SBPosition3& boxSize, unsigned int nCellsX, unsigned int nCellsY, unsigned int nCellsZ, float* ambientOcclusionData) override;		///< To collect ambient occlusion data
@@ -143,6 +146,8 @@ private:
 
 	float														color[4]{ 1.0f, 0.0f, 0.0f, 1.0f };										///< The pathline color
 
+	bool														ensureCylinderData(bool refreshAppearance = false);
+	void														populatePositionAndNodeData();
 	void														populateRadiusData();
 	void														populateColorData();
 
