@@ -228,4 +228,5 @@ find_package ( OpenGL )
 # SAMSON Extension folders #
 ############################
 
+enable_testing()
 ADD_SUBDIRECTORY(Pathlines)

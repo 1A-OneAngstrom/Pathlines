@@ -78,3 +78,15 @@ SAMSON_INSTALL_ELEMENT_DIRECTORY(resource/ ${OUTPUT_UUID}/Resource)
 SAMSON_INSTALL_ELEMENT_DIRECTORY(doc/ ${OUTPUT_UUID}/Documentation)
 
 SAMSON_INSTALL_ELEMENT (${OUTPUT_NAME} ${OUTPUT_UUID})
+# Use real production types for ownership regressions; no renderer or test subclass is needed.
+enable_testing()
+add_executable(SEPathlinesOwnershipTests tests/SEPathlinesOwnershipTests.cpp)
+target_link_libraries(SEPathlinesOwnershipTests PRIVATE SEPathlines ${QT_LIBRARIES} ${SAMSON_SDK_LIBRARIES})
+add_test(NAME SEPathlines.Ownership COMMAND SEPathlinesOwnershipTests)
+if(WIN32)
+  get_filename_component(_audit_sdk_parent "${CMAKE_SAMSON_SDK_PATH}" DIRECTORY)
+  get_filename_component(_audit_install_root "${_audit_sdk_parent}" DIRECTORY)
+  get_filename_component(_audit_sdk_version "${CMAKE_SAMSON_SDK_PATH}" NAME)
+  set_tests_properties(SEPathlines.Ownership PROPERTIES ENVIRONMENT_MODIFICATION
+    "PATH=path_list_prepend:${_qt6_prefix}/bin;PATH=path_list_prepend:${_audit_install_root}/SAMSON/${_audit_sdk_version}/Binaries")
+endif()
