@@ -23,7 +23,10 @@ SB_CLASS_BEGIN(SEPathlineOfCenterOfMassVisualModel);
 	SB_FACTORY_BEGIN;
 
 		SB_CONSTRUCTOR_0();
-		SB_CONSTRUCTOR_1(const SBNodeIndexer&);
+		SB_CONSTRUCTOR_N_BEGIN(1, const SBNodeIndexer&)
+			SB_CALLABLE_MEMBER_DOC_BRIEF("Constructs center-of-mass pathlines for a set of nodes"),
+			SB_CALLABLE_MEMBER_DOC_PARAM("nodeIndexer", "Nodes whose center-of-mass trajectories are visualized")
+		SB_CONSTRUCTOR_END;
 
 	SB_FACTORY_END;
 
