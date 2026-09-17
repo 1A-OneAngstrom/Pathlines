@@ -82,11 +82,37 @@ SAMSON_INSTALL_ELEMENT (${OUTPUT_NAME} ${OUTPUT_UUID})
 enable_testing()
 add_executable(SEPathlinesOwnershipTests tests/SEPathlinesOwnershipTests.cpp)
 target_link_libraries(SEPathlinesOwnershipTests PRIVATE SEPathlines ${QT_LIBRARIES} ${SAMSON_SDK_LIBRARIES})
-add_test(NAME SEPathlines.Ownership COMMAND SEPathlinesOwnershipTests)
-if(WIN32)
-  get_filename_component(_audit_sdk_parent "${CMAKE_SAMSON_SDK_PATH}" DIRECTORY)
-  get_filename_component(_audit_install_root "${_audit_sdk_parent}" DIRECTORY)
-  get_filename_component(_audit_sdk_version "${CMAKE_SAMSON_SDK_PATH}" NAME)
-  set_tests_properties(SEPathlines.Ownership PROPERTIES ENVIRONMENT_MODIFICATION
-    "PATH=path_list_prepend:${_qt6_prefix}/bin;PATH=path_list_prepend:${_audit_install_root}/SAMSON/${_audit_sdk_version}/Binaries")
+add_test(NAME SEPathlines.Ownership COMMAND $<TARGET_FILE:SEPathlinesOwnershipTests>)
+get_filename_component(_pathlines_sdk_parent "${CMAKE_SAMSON_SDK_PATH}" DIRECTORY)
+get_filename_component(_pathlines_install_root "${_pathlines_sdk_parent}" DIRECTORY)
+get_filename_component(_pathlines_sdk_version "${CMAKE_SAMSON_SDK_PATH}" NAME)
+if(SAMSON_TEST_RELEASE_RUNTIME_DIR)
+  set(_pathlines_release_runtime "${SAMSON_TEST_RELEASE_RUNTIME_DIR}")
+elseif(WIN32)
+  set(_pathlines_release_runtime "${_pathlines_install_root}/SAMSON/${_pathlines_sdk_version}/Binaries")
+else()
+  set(_pathlines_release_runtime "${CMAKE_SAMSON_SDK_PATH}/libs")
 endif()
+if(SAMSON_TEST_DEBUG_RUNTIME_DIR)
+  set(_pathlines_debug_runtime "${SAMSON_TEST_DEBUG_RUNTIME_DIR}")
+else()
+  set(_pathlines_debug_runtime "${CMAKE_SAMSON_SDK_PATH}/SAMSON-Debug/Binaries")
+endif()
+set(_pathlines_runtime "$<IF:$<CONFIG:Debug>,${_pathlines_debug_runtime},${_pathlines_release_runtime}>")
+if(WIN32)
+  set(_pathlines_test_environment
+    "PATH=path_list_prepend:$<TARGET_FILE_DIR:Qt6::Core>"
+    "PATH=path_list_prepend:${_pathlines_runtime}")
+elseif(APPLE)
+  set(_pathlines_test_environment
+    "DYLD_LIBRARY_PATH=path_list_prepend:$<TARGET_FILE_DIR:Qt6::Core>"
+    "DYLD_LIBRARY_PATH=path_list_prepend:${_pathlines_runtime}"
+    "DYLD_FRAMEWORK_PATH=path_list_prepend:$<TARGET_FILE_DIR:Qt6::Core>"
+    "DYLD_FRAMEWORK_PATH=path_list_prepend:${_pathlines_runtime}")
+else()
+  set(_pathlines_test_environment
+    "LD_LIBRARY_PATH=path_list_prepend:$<TARGET_FILE_DIR:Qt6::Core>"
+    "LD_LIBRARY_PATH=path_list_prepend:${_pathlines_runtime}")
+endif()
+set_tests_properties(SEPathlines.Ownership PROPERTIES
+  ENVIRONMENT_MODIFICATION "${_pathlines_test_environment}")
