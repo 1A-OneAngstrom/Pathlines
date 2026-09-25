@@ -584,7 +584,10 @@ std::string					SEPathlineOfCenterOfMassVisualModel::getRadiusSuffix() const {
 
 }
 
+/// \brief Invalidates borrowed-source position caches so the next refresh observes path changes.
 void SEPathlineOfCenterOfMassVisualModel::update() {
+
+	vectorOfPathsWithPositions.clear();
 
 	SAMSON::requestViewportUpdate();
 
@@ -869,11 +872,15 @@ SBMVisualModelMesh* SEPathlineOfCenterOfMassVisualModel::createMesh() {
 
 }
 
+/// \brief Refreshes owned cylinder buffers and borrowed aliases, including empty trajectories.
+/// \param refreshAppearance Also recompute source positions and appearance for mesh conversion.
+/// \return True when at least one cylinder is available; false for empty input.
 bool SEPathlineOfCenterOfMassVisualModel::ensureCylinderData(bool refreshAppearance) {
 
 	if (pathIndexer.size() == 0 || atomIndexer.size() == 0) return false;
 
-	if (vectorOfPathsWithPositions.empty())
+	// Mesh conversion and explicit updates must observe changes in the source trajectory.
+	if (refreshAppearance || vectorOfPathsWithPositions.empty())
 		computePositionsAlongPaths();
 
 	unsigned int newNumberOfCylinders = 0;
@@ -890,15 +897,8 @@ bool SEPathlineOfCenterOfMassVisualModel::ensureCylinderData(bool refreshAppeara
 		numberOfCylinders = newNumberOfCylinders;
 		numberOfPositionsForCylinders = 2 * newNumberOfCylinders;
 
-		delete[] indexData;
-		delete[] positionData;
-		delete[] radiusData;
-		delete[] colorData;
-		delete[] flagData;
-		delete[] nodeIndexData;
-		delete[] capData;
-		delete[] materialData;
-		delete[] nodeData;
+		// cylinderArray owns the previous buffers; its setters release them on replacement
+		// local pointers become borrowed aliases of the newly transferred allocations
 
 		indexData = numberOfPositionsForCylinders ? new unsigned int[numberOfPositionsForCylinders]() : nullptr;
 		positionData = numberOfPositionsForCylinders ? new float[3 * numberOfPositionsForCylinders]() : nullptr;

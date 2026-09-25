@@ -84,6 +84,7 @@ public:
 
 	//@}
 
+	/// \brief Invalidates cached trajectory positions and requests a viewport refresh.
 	void														update();
 
 	/// \name Selections
@@ -109,7 +110,7 @@ private:
 
 	std::vector< std::pair<SBPointer<SBPath>, std::vector<SBPosition3> > > vectorOfPathsWithPositions;									///< A vector of pairs of paths with a vector of positions along the path
 
-	void														computePositionsAlongPaths();
+	void														computePositionsAlongPaths(); ///< Rebuilds cached path positions without transferring path-owned data.
 
 	static SBPosition3											computePosition(const SBPath* path, const SBPointerIndexer<SBAtom>& atomIndexer, const unsigned int step);
 
@@ -146,7 +147,7 @@ private:
 
 	float														color[4]{ 1.0f, 0.0f, 0.0f, 1.0f };										///< The pathline color
 
-	bool														ensureCylinderData(bool refreshAppearance = false);
+	bool														ensureCylinderData(bool refreshAppearance = false); ///< Refreshes owned arrays and counts; returns false for empty trajectories.
 	void														populatePositionAndNodeData();
 	void														populateRadiusData();
 	void														populateColorData();
